@@ -106,3 +106,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Dicom
+*.dcm
+*.dicom
+mri_src/
