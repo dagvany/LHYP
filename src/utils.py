@@ -10,12 +10,13 @@ def get_logger(name):
     :param name: the name of the modeule where the logger is created
     :return: a custom configured logger object
     """
+    setLevel = logging.INFO
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(setLevel)
     handler = logging.FileHandler("hypertrophy.log", mode='a')
     formatter = logging.Formatter('%(levelname)s - %(asctime)s - %(name)s -- %(msg)s')
     handler.setFormatter(formatter)
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(setLevel)
 
     logger.addHandler(handler)
     return logger

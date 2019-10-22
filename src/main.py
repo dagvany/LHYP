@@ -30,7 +30,7 @@ except Exception as ex:
 for p in patients:
     img_meta = []
     for t in p.ImageTypes:
-        img_meta.append('{}: {:4d} attr: {:4d}'.format(
+        img_meta.append('{}: {:4d} commonAttr: {:4d}'.format(
             t,
             len(p.ImageTypes[t].Views),
             len(p.ImageTypes[t].CommonAttibutes)))

@@ -1,8 +1,15 @@
 {
     "image_folder": "/home/dome/Dipterv/mri_src",
     "image_types": {
-        "la": "la",
-        "sa": "sa/images"
+        "la": {
+            "folder": "la",
+            "separator_attr": "ImagePositionPatient"
+        },
+        "sa": {
+            "folder": "sa/images",
+            "separator_attr": "ImagePositionPatient"
+        }
+
     },
     "processed_folder": "home/dome/Dipterv/picle_src"
 }

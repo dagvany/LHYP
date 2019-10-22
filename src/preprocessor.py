@@ -28,8 +28,9 @@ class Preprocessor:
                 path = os.path.join(
                     config['image_folder'],
                     patientId,
-                    config['image_types'][img_type])
-                patient.ImageTypes[img_type] = Preprocessor._getImages(path)
+                    config['image_types'][img_type]["folder"])
+                sep_attr = config['image_types'][img_type]["separator_attr"]
+                patient.ImageTypes[img_type] = Preprocessor._getImages(path, sep_attr)
                 
                 if len(patient.ImageTypes[img_type].Views) == 0:
                     logger.error('{} doesnt contain correct {} images'.format(
@@ -66,13 +67,14 @@ class Preprocessor:
             logger.error(meta_file_location + ' is not found!')
     
     @staticmethod
-    def _getImages(image_folder):
-        # TODO: filter images/views from config
-        i_collection = Image_collection()
-
+    def _getImages(image_folder, separator_attr):
         dcm_files = os.listdir(image_folder)
         if len(dcm_files) == 0:
             logger.error(image_folder + ' is empty!')
+                
+        i_collection = Image_collection()
+        separator_attr_vals = []
+
         for file in dcm_files:
             file_path = os.path.join(image_folder, file)
             if file.find('.dcm') == -1:
@@ -81,8 +83,24 @@ class Preprocessor:
 
             try:
                 with dicom.dcmread(file_path) as temp_dcm:
-                    img = Preprocessor._createImage(temp_dcm)
-                    i_collection.Views.append(img)
+                    try:
+                        if separator_attr:
+                            attr_val = getattr(temp_dcm, separator_attr)
+                            #logger.debug('file: {}\nattr_val: {}, sep_attr_vals: {}'.format(file_path, attr_val, separator_attr_vals))
+                            if attr_val not in separator_attr_vals:
+                                separator_attr_vals.append(attr_val)
+                            else:
+                                continue
+                        img = Preprocessor._createImage(temp_dcm)
+                        i_collection.Views.append(img)
+                    except AttributeError as ex:
+                        # I found some images, what is not correct with MicroDicom,
+                        # but processable with pydicom
+                        # However error happens also with bad separator attr
+                        msg = 'Separator ("{}") attr missing from img: {}'\
+                            .format(separator_attr, file_path)
+                        logger.error(msg)
+                        raise ex
             except Exception:
                 logger.error('Broken: {}'.format(file_path), exc_info=True)
 
