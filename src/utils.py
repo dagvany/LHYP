@@ -1,6 +1,7 @@
 import logging
 import time
 import functools
+import sys
 
 
 def get_logger(name):
@@ -11,14 +12,20 @@ def get_logger(name):
     :return: a custom configured logger object
     """
     setLevel = logging.INFO
+    
     logger = logging.getLogger(name)
     logger.setLevel(setLevel)
+    
     handler = logging.FileHandler("hypertrophy.log", mode='a')
     formatter = logging.Formatter('%(levelname)s - %(asctime)s - %(name)s -- %(msg)s')
     handler.setFormatter(formatter)
     handler.setLevel(setLevel)
 
+    std_handler = logging.StreamHandler()
+    std_handler.setFormatter(formatter)
+
     logger.addHandler(handler)
+    #logger.addHandler(std_handler)
     return logger
 
 

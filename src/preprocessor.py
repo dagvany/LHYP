@@ -19,7 +19,7 @@ class Preprocessor:
         dirs = os.listdir(config['image_folder'])
 
         for patientId in dirs: # folder names = patientIds
-            logger.info('Start preprocessing: ' + patientId)
+            logger.info('Start: ' + patientId)
             patient = Patient(patientId)
             meta_folder = os.path.join(config['image_folder'], patientId)
             patient.Pathology = Preprocessor._getPathology(meta_folder)
@@ -38,7 +38,7 @@ class Preprocessor:
                         img_type.upper()))
             
             patients.append(patient)
-            logger.info('Finished preprocessing: ' + patientId)
+            logger.info('Finished: ' + patientId)
         return patients
 
     @staticmethod
