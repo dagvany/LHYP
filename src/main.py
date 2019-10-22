@@ -32,8 +32,8 @@ for p in patients:
     for t in p.ImageTypes:
         img_meta.append('{}: {:4d} attr: {:4d}'.format(
             t,
-            len(p.ImageTypes[t].views),
-            len(p.ImageTypes[t].common_attibutes)))
+            len(p.ImageTypes[t].Views),
+            len(p.ImageTypes[t].CommonAttibutes)))
     
     print('\t'.join([
         p.ID, 

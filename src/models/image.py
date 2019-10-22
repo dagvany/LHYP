@@ -3,5 +3,5 @@
 
 class Image:
     def __init__(self):
-        self.pixel_array = None
-        self.attributes = {}
+        self.PixelArray = None
+        self.Attributes = {}

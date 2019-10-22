@@ -29,10 +29,9 @@ class Preprocessor:
                     config['image_folder'],
                     patientId,
                     config['image_types'][img_type])
-                logger.debug(path)
                 patient.ImageTypes[img_type] = Preprocessor._getImages(path)
                 
-                if len(patient.ImageTypes[img_type].views) == 0:
+                if len(patient.ImageTypes[img_type].Views) == 0:
                     logger.error('{} doesnt contain correct {} images'.format(
                         patientId,
                         img_type.upper()))
@@ -79,25 +78,30 @@ class Preprocessor:
             if file.find('.dcm') == -1:
                 logger.warning('Unwanted file: {}'.format(file_path))
                 continue
-            
-            logger.debug(file_path)
+
             try:
                 with dicom.dcmread(file_path) as temp_dcm:
                     img = Preprocessor._createImage(temp_dcm)
-                    i_collection.views.append(img)
+                    i_collection.Views.append(img)
             except Exception:
                 logger.error('Broken: {}'.format(file_path), exc_info=True)
 
+        i_collection.organiseAttributes()
         return i_collection
 
     @staticmethod
     def _createImage(dcm_file):
         img = Image()
-        img.pixel_array = dcm_file.pixel_array
+        img.PixelArray = dcm_file.pixel_array
 
-        for attr in dir(dcm_file):
-            # attributes start with uppercase
-            # PixelData is already copied to pixel_array
-            if attr[0].isupper and attr != 'PixelData':
-                img.attributes[attr] = getattr(dcm_file, attr)
+        file_attrs = set(dir(dcm_file))
+        # attributes start with uppercase
+        filteredAttrs = [a for a in file_attrs if a[0].islower()]
+        filteredAttrs = filteredAttrs + dir(object)
+        # PixelData is already copied to pixel_array
+        filteredAttrs.append('PixelData')
+        file_attrs = file_attrs.difference(filteredAttrs)
+
+        for attr in file_attrs:
+            img.Attributes[attr] = getattr(dcm_file, attr)
         return img
