@@ -9,8 +9,4 @@ class Pathology(Enum):
     HCM       = 1
     AMY       = 2
     EMF       = 3
-
-class Gender(Enum):
-    UNDEFINED = None
-    MALE      = 0
-    FEMALE    = 1
+    
