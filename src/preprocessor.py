@@ -2,19 +2,40 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 from utils import get_logger, progress_bar
 import pydicom as dicom
-from models import Patient, Pathology, Image, Image_collection
+
+from models import Patient, Pathology, Image, ImageCollection
 
 logger = get_logger(__name__)
 
 class Preprocessor:
     '''
-    Abstract Class
-    TODO
+    Abstract class for patients dcm-s preprocessing
+    It has config.json driven behavior
     '''
+
+    @staticmethod
+    def getConfiguration(jsonFileLocation = "config.json"):
+        try:
+            with open(jsonFileLocation, 'r') as fp:
+                config = json.load(fp)
+        except FileNotFoundError:
+            logger.critical(jsonFileLocation + ' is not found!')
+            exit(1)
+        except ValueError:
+            logger.critical(jsonFileLocation + ' JSON format is not correct!')
+            exit(1) 
+        
+        return config
+
     @staticmethod
     def getPatients(config):
+        '''
+        config: config.json -> dict
+        return with preprocessed patient array
+        '''
         patients = []
         dirs = os.listdir(config['image_folder'])
 
@@ -22,21 +43,21 @@ class Preprocessor:
             progress_bar(index+1, len(dirs), 20)
             logger.info('Start: ' + patientId)
             patient = Patient(patientId)
-            meta_folder = os.path.join(config['image_folder'], patientId)
-            patient.Pathology = Preprocessor._getPathology(meta_folder)
+            metaFolder = os.path.join(config['image_folder'], patientId)
+            patient.Pathology = Preprocessor._getPathology(metaFolder)
             
-            for img_type in config['image_types']:
+            for imgType in config['image_types']:
                 path = os.path.join(
                     config['image_folder'],
                     patientId,
-                    config['image_types'][img_type]["folder"])
-                sep_attr = config['image_types'][img_type]["separator_attr"]
-                patient.ImageTypes[img_type] = Preprocessor._getImages(path, sep_attr)
+                    config['image_types'][imgType]["folder"])
+                sepAttr = config['image_types'][imgType]["separator_attr"]
+                patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr)
                 
-                if len(patient.ImageTypes[img_type].Views) == 0:
+                if len(patient.ImageTypes[imgType].Views) == 0:
                     logger.error('{} doesnt contain correct {} images'.format(
                         patientId,
-                        img_type.upper()))
+                        imgType.upper()))
             
             patients.append(patient)
             logger.info('Finished: ' + patientId)
@@ -44,9 +65,9 @@ class Preprocessor:
 
     @staticmethod
     def _getPathology(folder):
-        meta_file_location = os.path.join(folder, 'meta.txt')
+        metaFileLocation = os.path.join(folder, 'meta.txt')
         try:
-            with open(meta_file_location, 'r') as fp:
+            with open(metaFileLocation, 'r') as fp:
                 meta = fp.read().replace('\r', '')
                 meta = meta.replace(' ', '').split('\n')
                 meta.remove('')
@@ -59,68 +80,68 @@ class Preprocessor:
                     for data in meta:
                         tag = data.split(':')[0]
                         unhandledMetaTags.append(tag)
-                    ex_text = '{}\n\tFollowing meta data tags are not handled: {}'
+                    exText = '{}\n\tFollowing meta data tags are not handled: {}'
                     tags = ', '.join(unhandledMetaTags)
-                    ex_message = ex_text.format(meta_file_location, tags)
-                    logger.error(ex_message)
-                    raise Exception(ex_message)
+                    exMsg = exText.format(metaFileLocation, tags)
+                    logger.error(exMsg)
+                    raise Exception(exMsg)
         except FileNotFoundError:
-            logger.error(meta_file_location + ' is not found!')
+            logger.error(metaFileLocation + ' is not found!')
     
     @staticmethod
-    def _getImages(image_folder, separator_attr):
-        dcm_files = os.listdir(image_folder)
-        if len(dcm_files) == 0:
-            logger.error(image_folder + ' is empty!')
+    def _getImages(imageFolder, separatorAttr):
+        dcmFiles = os.listdir(imageFolder)
+        if len(dcmFiles) == 0:
+            logger.error(imageFolder + ' is empty!')
                 
-        i_collection = Image_collection()
-        separator_attr_vals = []
+        iCollection = ImageCollection()
+        separatorAttrVals = []
 
-        for file in dcm_files:
-            file_path = os.path.join(image_folder, file)
+        for file in dcmFiles:
+            filePath = os.path.join(imageFolder, file)
             if file.find('.dcm') == -1:
-                logger.warning('Unwanted file: {}'.format(file_path))
+                logger.warning('Unwanted file: {}'.format(filePath))
                 continue
 
             try:
-                with dicom.dcmread(file_path) as temp_dcm:
+                with dicom.dcmread(filePath) as tempDcm:
                     try:
-                        if separator_attr:
-                            attr_val = getattr(temp_dcm, separator_attr)
-                            #logger.debug('file: {}\nattr_val: {}, sep_attr_vals: {}'.format(file_path, attr_val, separator_attr_vals))
-                            if attr_val not in separator_attr_vals:
-                                separator_attr_vals.append(attr_val)
+                        if separatorAttr:
+                            attrVal = getattr(tempDcm, separatorAttr)
+                            #logger.debug('file: {}\nattr_val: {}, sepAttrVals: {}'.format(filePath, attrVal, separatorAttrVals))
+                            if attrVal not in separatorAttrVals:
+                                separatorAttrVals.append(attrVal)
                             else:
                                 continue
-                        img = Preprocessor._createImage(temp_dcm)
-                        i_collection.Views.append(img)
+                        img = Preprocessor._createImage(tempDcm)
+                        iCollection.Views.append(img)
                     except AttributeError as ex:
                         # I found some images, what is not correct with MicroDicom,
                         # but processable with pydicom
                         # However error happens also with bad separator attr
                         msg = 'Separator ("{}") attr missing from img: {}'\
-                            .format(separator_attr, file_path)
+                            .format(separatorAttr, filePath)
                         logger.error(msg)
                         raise ex
             except Exception:
-                logger.error('Broken: {}'.format(file_path), exc_info=True)
+                logger.error('Broken: {}'.format(filePath), exc_info=True)
 
-        i_collection.organiseAttributes()
-        return i_collection
+        iCollection.organiseAttributes()
+        return iCollection
 
     @staticmethod
-    def _createImage(dcm_file):
+    def _createImage(dcmFile):
         img = Image()
-        img.PixelArray = dcm_file.pixel_array
+        img.PixelArray = dcmFile.pixel_array
 
-        file_attrs = set(dir(dcm_file))
+        fileAttrs = set(dir(dcmFile))
         # attributes start with uppercase
-        filteredAttrs = [a for a in file_attrs if a[0].islower()]
+        filteredAttrs = [a for a in fileAttrs if a[0].islower()]
         filteredAttrs = filteredAttrs + dir(object)
         # PixelData is already copied to pixel_array
         filteredAttrs.append('PixelData')
-        file_attrs = file_attrs.difference(filteredAttrs)
+        fileAttrs = fileAttrs.difference(filteredAttrs)
 
-        for attr in file_attrs:
-            img.Attributes[attr] = getattr(dcm_file, attr)
+        for attr in fileAttrs:
+            img.Attributes[attr] = getattr(dcmFile, attr)
         return img

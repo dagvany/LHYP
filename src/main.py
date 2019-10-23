@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
+import os
 from utils import get_logger, progress_bar
 from preprocessor import Preprocessor
 
-# Serialization
-import os
-import pickle
 from models import Patient
 
 # Time measure
@@ -16,20 +13,20 @@ from datetime import timedelta
 
 logger = get_logger(__name__)
 
-def get_configuration(json_file_location = "config.json"):
+def preprocessPatiens(config):
+    print('Preprocessing Patients Images')
+    start = timer()
     try:
-        with open(json_file_location, 'r') as fp:
-            config = json.load(fp)
-    except FileNotFoundError:
-        logger.critical(json_file_location + ' is not found!')
+        patientData = Preprocessor.getPatients(config)
+    except Exception as ex:
+        logger.critical(ex, exc_info=True)
         exit(1)
-    except ValueError:
-        logger.critical(json_file_location + ' JSON format is not correct!')
-        exit(1) 
+    end = timer()
+    print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
     
-    return config
+    return patientData
 
-def print_table(patients):
+def printTable(patients):
     for p in patients:
         img_meta = []
         for t in p.ImageTypes:
@@ -43,59 +40,35 @@ def print_table(patients):
             str(p.Pathology),
             str(img_meta)]))
     print('\n\n')
-config = get_configuration("config.json")
 
-# Create preprocessed models
-if True:
-    print('Preprocessing')
-    start = timer()
-    try:
-        patients = Preprocessor.getPatients(config)
-    except Exception as ex:
-        logger.critical(ex, exc_info=True)
-        exit(1)
-    end = timer()
-    print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
-    print_table(patients)
+def serializePatiens(destPath, patientData):
+    for p in patientData:
+        p.serialize(destPath)
 
-    for p in patients:
-        file_name = p.ID + '.pickle'
-        if not os.path.exists(config["pickle_folder"]):
-            os.makedirs(config["pickle_folder"])
-        path = os.path.join(config["pickle_folder"], file_name)
-        try:
-            # Pydicom issue workaround
-            # https://github.com/pydicom/pydicom/issues/947
-            with open(path, 'wb') as fp:
-                pickle.dump({'ds': p}, fp, protocol=1)
-        except Exception:
-            msg = 'Patient: {} serialization (dump) is failed!'.format(p.ID)
-            logger.critical(msg, exc_info=True)
-            exit(1)
-        logger.info('Dumped: {}'.format(file_name))
-
-# Reaload from pickle files
-if True:
+def unSerializePatients(srcFolderPath):
     print('Reload from Pickle')
     start = timer()
-    reloaded_patients = []
-    file_list = os.listdir(config["pickle_folder"])
-    for index, file_name in enumerate(file_list):
-        progress_bar(index+1, len(file_list), 20)
-        path = os.path.join(config["pickle_folder"], file_name)
-        logger.debug('Pickle load: {}'.format(path))
-        try:
-            # Pydicom issue workaround
-            # https://github.com/pydicom/pydicom/issues/947
-            with open(path, 'rb') as fp:
-                patient = pickle.load(fp)['ds']
-                reloaded_patients.append(patient)
-        except Exception:
-            msg = '{} serialization (load) is failed!'.format(file_name)
-            logger.critical(msg, exc_info=True)
-            exit(1)
-        logger.info('Loaded: {}'.format(file_name))
+    reloadedPatients = []
+    fileList = os.listdir(config["pickle_folder"])
+    for index, fileName in enumerate(fileList):
+        progress_bar(index+1, len(fileList), 20)
+        fullPath = os.path.join(config["pickle_folder"], fileName)
+        logger.debug('Pickle load: {}'.format(fullPath))
+        
+        patient = Patient.unSerialize(fullPath)
+        reloadedPatients.append(patient)
 
     end = timer()
     print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
-    print_table(reloaded_patients)
+
+    return reloadedPatients
+
+# Preprocessing
+config = Preprocessor.getConfiguration("config.json")
+processedPationts = preprocessPatiens(config)
+printTable(processedPationts)
+
+serializePatiens(config['pickle_folder'], processedPationts)
+
+loadedPatients = unSerializePatients(config['pickle_folder'])
+printTable(loadedPatients)

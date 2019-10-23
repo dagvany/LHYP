@@ -9,7 +9,7 @@ from .image import Image
 
 logger = get_logger(__name__)
 
-class Image_collection:
+class ImageCollection:
     def __init__(self):
         self.Views = []
         self.CommonAttibutes = {}
