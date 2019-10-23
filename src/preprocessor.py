@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from utils import get_logger
+from utils import get_logger, progress_bar
 import pydicom as dicom
 from models import Patient, Pathology, Image, Image_collection
 
@@ -18,7 +18,8 @@ class Preprocessor:
         patients = []
         dirs = os.listdir(config['image_folder'])
 
-        for patientId in dirs: # folder names = patientIds
+        for index, patientId in enumerate(dirs): # folder names = patientIds
+            progress_bar(index+1, len(dirs), 20)
             logger.info('Start: ' + patientId)
             patient = Patient(patientId)
             meta_folder = os.path.join(config['image_folder'], patientId)
