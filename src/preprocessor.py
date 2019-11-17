@@ -22,46 +22,77 @@ class Preprocessor:
             with open(jsonFileLocation, 'r') as fp:
                 config = json.load(fp)
         except FileNotFoundError:
-            logger.critical(jsonFileLocation + ' is not found!')
+            msg = jsonFileLocation + ' is not found!'
+            logger.critical(msg)
+            print(mgs)
             exit(1)
         except ValueError:
-            logger.critical(jsonFileLocation + ' JSON format is not correct!')
+            msg = jsonFileLocation + ' JSON format is not correct!'
+            logger.critical(msg)
+            print(msg)
             exit(1) 
         
         return config
 
     @staticmethod
-    def getPatients(config):
+    def preprocessPatientsByConfig(config):
         '''
         config: config.json -> dict
         return with preprocessed patient array
         '''
-        patients = []
+        stat = []
+        numOfCorrect = 0
+        numOfBroken = 0
         dirs = os.listdir(config['image_folder'])
 
         for index, patientId in enumerate(dirs): # folder names = patientIds
-            progress_bar(index+1, len(dirs), 20)
             logger.info('Start: ' + patientId)
-            patient = Patient(patientId)
-            metaFolder = os.path.join(config['image_folder'], patientId)
-            patient.Pathology = Preprocessor._getPathology(metaFolder)
+            progress_bar(index+1, len(dirs), 20)
+
+            patient = Preprocessor.preprocessPatient(config, patientId)
+            if patient.hasAnyImage():
+                patient.organizeImageAttributes()
+                patient.serialize(config["pickle_folder"])
+                stat.append(Preprocessor._getStatFromPatient(patient))
+                numOfCorrect = numOfCorrect + 1
+            else:
+                msg = '{} hasnt contains any images!'.format(patient.ID)
+                stat.append(msg)
+                logger.warning(msg)
+                numOfBroken = numOfBroken + 1
             
-            for imgType in config['image_types']:
-                path = os.path.join(
-                    config['image_folder'],
-                    patientId,
-                    config['image_types'][imgType]["folder"])
-                sepAttr = config['image_types'][imgType]["separator_attr"]
-                patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr)
-                
-                if len(patient.ImageTypes[imgType].Views) == 0:
-                    logger.error('{} doesnt contain correct {} images'.format(
-                        patientId,
-                        imgType.upper()))
-            
-            patients.append(patient)
             logger.info('Finished: ' + patientId)
-        return patients
+        return stat, numOfCorrect, numOfBroken
+    
+    @staticmethod
+    def preprocessPatient(config, patientId):
+        patientFolder = os.path.join(config['image_folder'], patientId)
+        patient = Patient(patientId)
+        patient.Pathology = Preprocessor._getPathology(patientFolder)
+
+        for imgType in config['image_types']:
+            iTypeFolder = config['image_types'][imgType]["folder"]
+            path = os.path.join(patientFolder, iTypeFolder)
+            sepAttr = config['image_types'][imgType]["separator_attr"]
+            patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr)
+            
+            if len(patient.ImageTypes[imgType].Views) == 0:
+                msg = '{} doesnt contain correct {} images'.format(
+                    patientId, imgType.upper())
+                logger.error(msg)
+        
+        return patient
+    
+    @staticmethod
+    def _getStatFromPatient(patient):
+        imgStat = []
+        for imgType in patient.ImageTypes:
+            numOfViews = len(patient.ImageTypes[imgType].Views)
+            numOfCommonAttrs = len(patient.ImageTypes[imgType].CommonAttibutes)
+            stat = '{}: {:4d} commonAttr: {:4d}'.format(
+                imgType, numOfViews, numOfCommonAttrs)
+            imgStat.append(stat)
+        return '\t'.join([patient.ID, str(patient.Pathology), str(imgStat)])
 
     @staticmethod
     def _getPathology(folder):
@@ -73,7 +104,13 @@ class Preprocessor:
                 meta.remove('')
                 if len(meta) == 1:
                     meta = meta[0].replace(' ', '').split(':')
-                    pathology = Pathology[meta[1].upper()]
+                    pathologyEnumName = meta[1].upper()
+                    try:
+                        pathology = Pathology[pathologyEnumName]
+                    except ValueError:
+                        msg = '{} is unknown Pathology!'.format(pathologyEnumName)
+                        logger.critical(msg)
+                        print(msg)
                     return pathology
                 else:
                     unhandledMetaTags = []
@@ -108,7 +145,6 @@ class Preprocessor:
                     try:
                         if separatorAttr:
                             attrVal = getattr(tempDcm, separatorAttr)
-                            #logger.debug('file: {}\nattr_val: {}, sepAttrVals: {}'.format(filePath, attrVal, separatorAttrVals))
                             if attrVal not in separatorAttrVals:
                                 separatorAttrVals.append(attrVal)
                             else:
@@ -126,7 +162,6 @@ class Preprocessor:
             except Exception:
                 logger.error('Broken: {}'.format(filePath), exc_info=True)
 
-        iCollection.organiseAttributes()
         return iCollection
 
     @staticmethod

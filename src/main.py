@@ -11,64 +11,82 @@ from models import Patient
 from timeit import default_timer as timer
 from datetime import timedelta
 
+# Unserialize Stat
+import json
+from models import patient_enums, ImageCollection, Image
+
 logger = get_logger(__name__)
 
 def preprocessPatiens(config):
     print('Preprocessing Patients Images')
     start = timer()
     try:
-        patientData = Preprocessor.getPatients(config)
+        patientStats = Preprocessor.preprocessPatientsByConfig(config)
     except Exception as ex:
         logger.critical(ex, exc_info=True)
+        print(ex)
         exit(1)
     end = timer()
     print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
     
-    return patientData
-
-def printTable(patients):
-    for p in patients:
-        img_meta = []
-        for t in p.ImageTypes:
-            img_meta.append('{}: {:4d} commonAttr: {:4d}'.format(
-                t,
-                len(p.ImageTypes[t].Views),
-                len(p.ImageTypes[t].CommonAttibutes)))
-        
-        print('\t'.join([
-            p.ID, 
-            str(p.Pathology),
-            str(img_meta)]))
-    print('\n\n')
-
-def serializePatiens(destPath, patientData):
-    for p in patientData:
-        p.serialize(destPath)
+    return patientStats
 
 def unSerializePatients(srcFolderPath):
     print('Reload from Pickle')
     start = timer()
     reloadedPatients = []
+    numOfEmpty = 0
+    numOfError = 0
+    pathologyNames = filter(lambda p: p[0] != '_', dir(patient_enums.Pathology))
+    typeDict = dict.fromkeys(list(pathologyNames), 0)
+    
     fileList = os.listdir(config["pickle_folder"])
     for index, fileName in enumerate(fileList):
         progress_bar(index+1, len(fileList), 20)
         fullPath = os.path.join(config["pickle_folder"], fileName)
         logger.debug('Pickle load: {}'.format(fullPath))
         
-        patient = Patient.unSerialize(fullPath)
-        reloadedPatients.append(patient)
+        try:
+            patient = Patient.unSerialize(fullPath)
+            if patient.hasAnyImage():
+                typeDict[patient.Pathology.name] = typeDict[patient.Pathology.name] + 1
+                reloadedPatients.append(patient)
+            else:
+                logger.warning('Empty: {}'.format(fullPath))
+                destPath = os.path.join(config['failed_pickle_folder'], fileName)
+                os.replace(fullPath, destPath)
+                numOfEmpty = numOfEmpty + 1
+        except Exception:
+            logger.error('Broken: {}'.format(fullPath), exc_info=True)
+            destPath = os.path.join(config['failed_pickle_folder'], fileName)
+            os.replace(fullPath, destPath)
+            numOfError = numOfError + 1
 
     end = timer()
+    
     print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
+    print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(index+1, numOfError, numOfEmpty))
+    try:
+        import psutil
+        patientSize = psutil.Process(os.getpid()).memory_info().rss /1024 /1024
+        print("Memory size of patients = {} Mbytes".format(patientSize))
+    except:
+        pass
+    print(json.dumps(typeDict, indent=4, sort_keys=True))
 
     return reloadedPatients
 
-# Preprocessing
-config = Preprocessor.getConfiguration("config.json")
-processedPationts = preprocessPatiens(config)
-printTable(processedPationts)
+if __name__ == '__main__':
+    config = Preprocessor.getConfiguration("config.json")
 
-serializePatiens(config['pickle_folder'], processedPationts)
+    # Preprocessing
+    if config["patients_preprocessing"]:    
+        patientStats = preprocessPatiens(config)
+        tldrStat = 'Total: {:5d}, Correct: {:5d}, Broken: {:5d}'.format(
+            patientStats[1]+patientStats[2], patientStats[1], patientStats[2])
+        print(tldrStat)
+        logger.info(tldrStat)
+        logger.info('\n'.join(patientStats[0]))
+    else:
+        patients = unSerializePatients(config['pickle_folder'])
 
-loadedPatients = unSerializePatients(config['pickle_folder'])
-printTable(loadedPatients)

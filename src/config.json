@@ -1,5 +1,6 @@
 {
-    "image_folder": "/home/dome/Dipterv/mri_src",
+    "patients_preprocessing": false,
+    "image_folder": "/media/Data/Dipterv_MRI/test_mri_src",
     "image_types": {
         "la": {
             "folder": "la",
@@ -11,5 +12,6 @@
         }
 
     },
-    "pickle_folder": "/home/dome/Dipterv/pickle_src"
+    "pickle_folder": "/media/Data/Dipterv_MRI/pickle_from_nano",
+    "failed_pickle_folder": "/media/Data/Dipterv_MRI/failed_pickle"
 }

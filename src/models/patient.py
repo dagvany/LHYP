@@ -18,6 +18,13 @@ class Patient:
         self.Pathology = Pathology.UNDEFINED
         self.ImageTypes = {}
 
+    def hasAnyImage(self):
+        return any([len(self.ImageTypes[t].Views) > 0 for t in self.ImageTypes])
+    
+    def organizeImageAttributes(self):
+        for iType in self.ImageTypes:
+            self.ImageTypes[iType].organiseAttributes()
+
     def serialize(self, dest_folder):
         '''
         dest_folder: folder path, location
@@ -38,6 +45,7 @@ class Patient:
         except Exception:
             msg = 'Patient: {} serialization (dump) is failed!'.format(self.ID)
             logger.critical(msg, exc_info=True)
+            print(msg)
             exit(1)
         logger.info('Dumped: {}'.format(file_name))
 
@@ -53,10 +61,10 @@ class Patient:
             # https://github.com/pydicom/pydicom/issues/947
             with open(src_path, 'rb') as fp:
                 patient = pickle.load(fp)['ds']
+            logger.info('Loaded: {}'.format(src_path))
         except Exception:
             msg = '{} serialization (load) is failed!'.format(src_path)
             logger.critical(msg, exc_info=True)
-            exit(1)
-        logger.info('Loaded: {}'.format(src_path))
+            print(msg)
 
         return patient

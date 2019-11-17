@@ -3,7 +3,6 @@ import time
 import functools
 import sys
 
-
 def get_logger(name):
     """
     Returns an already configured logger for a specific module.
