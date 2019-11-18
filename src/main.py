@@ -49,7 +49,8 @@ def unSerializePatients(srcFolderPath):
         try:
             patient = Patient.unSerialize(fullPath)
             if patient.hasAnyImage():
-                typeDict[patient.Pathology.name] = typeDict[patient.Pathology.name] + 1
+                pathName = patient.Pathology.name
+                typeDict[pathName] = typeDict[pathName] + 1
                 reloadedPatients.append(patient)
             else:
                 logger.warning('Empty: {}'.format(fullPath))
@@ -80,7 +81,7 @@ if __name__ == '__main__':
     config = Preprocessor.getConfiguration("config.json")
 
     # Preprocessing
-    if config["patients_preprocessing"]:    
+    if config["patients_preprocessing"]:
         patientStats = preprocessPatiens(config)
         tldrStat = 'Total: {:5d}, Correct: {:5d}, Broken: {:5d}'.format(
             patientStats[1]+patientStats[2], patientStats[1], patientStats[2])
@@ -88,5 +89,4 @@ if __name__ == '__main__':
         logger.info(tldrStat)
         logger.info('\n'.join(patientStats[0]))
     else:
-        patients = unSerializePatients(config['pickle_folder'])
-
+        patients = unSerializePatients(config['pickle_folder'])  

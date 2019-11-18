@@ -12,6 +12,6 @@
         }
 
     },
-    "pickle_folder": "/media/Data/Dipterv_MRI/pickle_from_nano",
+    "pickle_folder": "/media/Data/Dipterv_MRI/a",
     "failed_pickle_folder": "/media/Data/Dipterv_MRI/failed_pickle"
 }

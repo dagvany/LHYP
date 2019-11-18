@@ -102,28 +102,33 @@ class Preprocessor:
                 meta = fp.read().replace('\r', '')
                 meta = meta.replace(' ', '').split('\n')
                 meta.remove('')
-                if len(meta) == 1:
-                    meta = meta[0].replace(' ', '').split(':')
-                    pathologyEnumName = meta[1].upper()
-                    try:
-                        pathology = Pathology[pathologyEnumName]
-                    except ValueError:
-                        msg = '{} is unknown Pathology!'.format(pathologyEnumName)
-                        logger.critical(msg)
-                        print(msg)
-                    return pathology
-                else:
-                    unhandledMetaTags = []
-                    for data in meta:
-                        tag = data.split(':')[0]
-                        unhandledMetaTags.append(tag)
-                    exText = '{}\n\tFollowing meta data tags are not handled: {}'
-                    tags = ', '.join(unhandledMetaTags)
-                    exMsg = exText.format(metaFileLocation, tags)
-                    logger.error(exMsg)
-                    raise Exception(exMsg)
+            if len(meta) == 1:
+                meta = meta[0].replace(' ', '').split(':')
+                pathologyEnumName = meta[1].upper()
+                try:
+                    pathology = Pathology[pathologyEnumName]
+                except KeyError:
+                    msg = '{} is unknown Pathology!'.format(pathologyEnumName)
+                    logger.critical(msg)
+                    print(msg)
+                    exit(1)
+                return pathology
+            else:
+                unhandledMetaTags = []
+                for data in meta:
+                    tag = data.split(':')[0]
+                    unhandledMetaTags.append(tag)
+                exText = '{}\n\tMeta data tags are not handled: {}'
+                tags = ', '.join(unhandledMetaTags)
+                exMsg = exText.format(metaFileLocation, tags)
+                logger.critical(exMsg)
+                print(exMsg)
+                exit(1)
         except FileNotFoundError:
-            logger.error(metaFileLocation + ' is not found!')
+            exMsg = '{} is not found!'.format(metaFileLocation)
+            logger.critical(exMsg)
+            print(exMsg)
+            exit(1)
     
     @staticmethod
     def _getImages(imageFolder, separatorAttr):
