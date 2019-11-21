@@ -26,22 +26,15 @@ class Patient:
             self.ImageTypes[iType].organiseAttributes()
 
     def serialize(self, dest_folder):
-        '''
-        dest_folder: folder path, location
-        eg.: '/home/user/patiens/'
-        '''
-
         file_name = self.ID + '.pickle'
         
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
         path = os.path.join(dest_folder, file_name)
-        
+
         try:
-            # Pydicom issue workaround
-            # https://github.com/pydicom/pydicom/issues/947
             with open(path, 'wb') as fp:
-                pickle.dump({'ds': self}, fp, protocol=1)
+                pickle.dump(self, fp)
         except Exception:
             msg = 'Patient: {} serialization (dump) is failed!'.format(self.ID)
             logger.critical(msg, exc_info=True)
@@ -51,20 +44,12 @@ class Patient:
 
     @staticmethod
     def unSerialize(src_path):
-        '''
-        dest_folder: folder path, location
-        eg.: '/home/user/patiens/'
-        '''
-
         try:
-            # Pydicom issue workaround
-            # https://github.com/pydicom/pydicom/issues/947
             with open(src_path, 'rb') as fp:
-                patient = pickle.load(fp)['ds']
+                patient = pickle.load(fp)
             logger.info('Loaded: {}'.format(src_path))
         except Exception:
             msg = '{} serialization (load) is failed!'.format(src_path)
             logger.critical(msg, exc_info=True)
             print(msg)
-
         return patient

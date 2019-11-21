@@ -4,7 +4,11 @@
 import os
 import json
 from utils import get_logger, progress_bar
-import pydicom as dicom
+import pydicom
+
+# Attributes processing
+import numpy as np
+from decimal import Decimal
 
 from models import Patient, Pathology, Image, ImageCollection
 
@@ -12,7 +16,7 @@ logger = get_logger(__name__)
 
 class Preprocessor:
     '''
-    Abstract class for patients dcm-s preprocessing
+    Static class for patients dcm-s preprocessing
     It has config.json driven behavior
     '''
 
@@ -36,10 +40,6 @@ class Preprocessor:
 
     @staticmethod
     def preprocessPatientsByConfig(config):
-        '''
-        config: config.json -> dict
-        return with preprocessed patient array
-        '''
         stat = []
         numOfCorrect = 0
         numOfBroken = 0
@@ -48,6 +48,11 @@ class Preprocessor:
         for index, patientId in enumerate(dirs): # folder names = patientIds
             logger.info('Start: ' + patientId)
             progress_bar(index+1, len(dirs), 20)
+            
+            folderPath = os.path.join(config['image_folder'], patientId)
+            if not os.path.isdir(folderPath):
+                logger.warning("Unwaited file: {}".format(folderPath))
+                continue
 
             patient = Preprocessor.preprocessPatient(config, patientId)
             if patient.hasAnyImage():
@@ -80,7 +85,6 @@ class Preprocessor:
                 msg = '{} doesnt contain correct {} images'.format(
                     patientId, imgType.upper())
                 logger.error(msg)
-        
         return patient
     
     @staticmethod
@@ -132,21 +136,20 @@ class Preprocessor:
     
     @staticmethod
     def _getImages(imageFolder, separatorAttr):
-        dcmFiles = os.listdir(imageFolder)
+        files = os.listdir(imageFolder)
+        dcmFiles = list(filter(lambda x: x.lower().endswith('.dcm'), files))
         if len(dcmFiles) == 0:
             logger.error(imageFolder + ' is empty!')
+            return ImageCollection()
                 
         iCollection = ImageCollection()
         separatorAttrVals = []
 
         for file in dcmFiles:
             filePath = os.path.join(imageFolder, file)
-            if file.find('.dcm') == -1:
-                logger.warning('Unwanted file: {}'.format(filePath))
-                continue
 
             try:
-                with dicom.dcmread(filePath) as tempDcm:
+                with pydicom.dcmread(filePath) as tempDcm:
                     try:
                         if separatorAttr:
                             attrVal = getattr(tempDcm, separatorAttr)
@@ -166,22 +169,55 @@ class Preprocessor:
                         raise ex
             except Exception:
                 logger.error('Broken: {}'.format(filePath), exc_info=True)
-
         return iCollection
 
     @staticmethod
     def _createImage(dcmFile):
         img = Image()
         img.PixelArray = dcmFile.pixel_array
+        img.Attributes = Preprocessor._getAttributes(dcmFile)
+        return img
 
+    @staticmethod
+    def _getAttributes(dcmFile):
+        attributes = {}
         fileAttrs = set(dir(dcmFile))
         # attributes start with uppercase
-        filteredAttrs = [a for a in fileAttrs if a[0].islower()]
+        filteredAttrs = [a for a in fileAttrs if a[0].islower() or 'UID' in a]
         filteredAttrs = filteredAttrs + dir(object)
         # PixelData is already copied to pixel_array
         filteredAttrs.append('PixelData')
         fileAttrs = fileAttrs.difference(filteredAttrs)
 
+        # everyelse will be droped
+        enabledTypes = (int, str, Decimal, np.float)
+        convertableTypes = {
+            pydicom.valuerep.DSfloat:       np.float,
+            pydicom.valuerep.DSdecimal:     Decimal,
+            pydicom.valuerep.IS:            np.int,
+            pydicom.multival.MultiValue:    list
+        }
+
         for attr in fileAttrs:
-            img.Attributes[attr] = getattr(dcmFile, attr)
-        return img
+            dcmAttr = getattr(dcmFile, attr)
+
+            if isinstance(dcmAttr, tuple(convertableTypes.keys())):
+                try:
+                    attributes[attr] = Preprocessor._convertDicomType(convertableTypes, dcmAttr)
+                except KeyError:
+                    # pydicom inheritance
+                    # eg.: Sequence is inheritance of MultiValue
+                    pass
+            elif isinstance(dcmAttr, enabledTypes):
+                attributes[attr] = dcmAttr
+        return attributes
+    
+    @staticmethod
+    def _convertDicomType(convertableTypes, dcmAttr):
+        if isinstance(dcmAttr, tuple(convertableTypes.keys())):
+            newType = convertableTypes[type(dcmAttr)]
+            dcmAttr = newType(dcmAttr)
+            if isinstance(dcmAttr, list):
+                return [Preprocessor._convertDicomType(convertableTypes, x) for x in dcmAttr]
+        return dcmAttr
+                

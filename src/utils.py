@@ -20,13 +20,8 @@ def get_logger(name):
     handler.setFormatter(formatter)
     handler.setLevel(setLevel)
 
-    std_handler = logging.StreamHandler()
-    std_handler.setFormatter(formatter)
-
     logger.addHandler(handler)
-    #logger.addHandler(std_handler)
     return logger
-
 
 def process_time(logger):
     """

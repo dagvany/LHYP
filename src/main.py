@@ -41,6 +41,7 @@ def unSerializePatients(srcFolderPath):
     typeDict = dict.fromkeys(list(pathologyNames), 0)
     
     fileList = os.listdir(config["pickle_folder"])
+    index = 0
     for index, fileName in enumerate(fileList):
         progress_bar(index+1, len(fileList), 20)
         fullPath = os.path.join(config["pickle_folder"], fileName)
@@ -89,4 +90,4 @@ if __name__ == '__main__':
         logger.info(tldrStat)
         logger.info('\n'.join(patientStats[0]))
     else:
-        patients = unSerializePatients(config['pickle_folder'])  
+        patients = unSerializePatients(config['pickle_folder'])

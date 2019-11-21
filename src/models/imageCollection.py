@@ -19,27 +19,33 @@ class ImageCollection:
         if len(self.Views) < 1:
             return
 
-        all_attr = [list(img.Attributes.keys()) for img in self.Views]
-        logger.debug('raw all_attr: {}'.format(all_attr))
-        all_attr = set(functools.reduce(operator.add, all_attr))
-        all_attr = all_attr.difference(set(dir(dict)))
-        logger.debug('final all_attr: {}'.format(all_attr))
+        allAttr = [list(img.Attributes.keys()) for img in self.Views]
+        logger.debug('raw allAttr: {}'.format(allAttr))
+        allAttr = set(functools.reduce(operator.add, allAttr))
+        allAttr = allAttr.difference(set(dir(dict)))
+        deletableAttrs = list(filter(lambda x: x.startswith('_'), allAttr))
+        allAttr = list(filter(lambda x: x not in deletableAttrs, allAttr))
+        logger.debug('deletableAttrs: {}'.format(deletableAttrs))
+        logger.debug('final allAttr: {}'.format(allAttr))
         
-        common_attr = []
-        for attr in all_attr:
-            attr_val = None
+        commonAttr = []
+        for attr in allAttr:
+            attrVal = None
             for img in self.Views:
                 if attr not in img.Attributes:
                     break
-                elif attr_val is None:
-                    attr_val = img.Attributes[attr]
-                elif img.Attributes[attr] != attr_val:
+                elif attrVal is None:
+                    attrVal = img.Attributes[attr]
+                elif img.Attributes[attr] != attrVal:
                     break
             else:
-                common_attr.append(attr)
-        logger.debug('common_attr: {}'.format(common_attr))
+                commonAttr.append(attr)
+        logger.debug('commonAttr: {}'.format(commonAttr))
         
-        for attr in common_attr:
+        for attr in commonAttr:
             self.CommonAttibutes[attr] = self.Views[0].Attributes[attr]
-            for img in self.Views:
+        
+        for img in self.Views:
+            for attr in deletableAttrs + commonAttr:
                 del img.Attributes[attr]
+        

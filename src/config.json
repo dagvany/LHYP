@@ -10,8 +10,7 @@
             "folder": "sa/images",
             "separator_attr": "ImagePositionPatient"
         }
-
     },
-    "pickle_folder": "/media/Data/Dipterv_MRI/a",
+    "pickle_folder": "/media/Data/Dipterv_MRI/test_pickle",
     "failed_pickle_folder": "/media/Data/Dipterv_MRI/failed_pickle"
 }
