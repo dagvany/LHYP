@@ -31,7 +31,7 @@ def preprocessPatiens(config):
     
     return patientStats
 
-def unSerializePatients(srcFolderPath):
+def unSerializePatients(config):
     print('Reload from Pickle')
     start = timer()
     reloadedPatients = []
@@ -90,4 +90,5 @@ if __name__ == '__main__':
         logger.info(tldrStat)
         logger.info('\n'.join(patientStats[0]))
     else:
-        patients = unSerializePatients(config['pickle_folder'])
+        patients = unSerializePatients(config)
+    

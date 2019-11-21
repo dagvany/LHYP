@@ -1,0 +1,12 @@
+{
+    "patients_preprocessing": true,
+    "image_folder": "/media/Data/Dipterv_MRI/test/mri",
+    "image_types": {
+        "la": {
+            "folder": "la",
+            "separator_attr": "ImageOrientationPatient"
+        }
+    },
+    "pickle_folder": "/media/Data/Dipterv_MRI/test/pickle",
+    "failed_pickle_folder": "/media/Data/Dipterv_MRI/test/failed"
+}

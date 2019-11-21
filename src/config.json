@@ -1,14 +1,14 @@
 {
-    "patients_preprocessing": false,
+    "patients_preprocessing": true,
     "image_folder": "/media/Data/Dipterv_MRI/test_mri_src",
     "image_types": {
         "la": {
             "folder": "la",
-            "separator_attr": "ImagePositionPatient"
+            "separator_attr": "ImageOrientationPatient"
         },
         "sa": {
             "folder": "sa/images",
-            "separator_attr": "ImagePositionPatient"
+            "separator_attr": "ImageOrientationPatient"
         }
     },
     "pickle_folder": "/media/Data/Dipterv_MRI/test_pickle",
