@@ -79,7 +79,8 @@ class Preprocessor:
             iTypeFolder = config['image_types'][imgType]["folder"]
             path = os.path.join(patientFolder, iTypeFolder)
             sepAttr = config['image_types'][imgType]["separator_attr"]
-            patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr)
+            goalAmount = config['image_types'][imgType]["goal_amount"]
+            patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr, goalAmount)
             
             if len(patient.ImageTypes[imgType].Views) == 0:
                 msg = '{} doesnt contain correct {} images'.format(
@@ -135,14 +136,14 @@ class Preprocessor:
             exit(1)
     
     @staticmethod
-    def _getImages(imageFolder, separatorAttr):
+    def _getImages(imageFolder, separatorAttr, goalAmount):
         files = os.listdir(imageFolder)
         dcmFiles = list(filter(lambda x: x.lower().endswith('.dcm'), files))
         if len(dcmFiles) == 0:
             logger.error(imageFolder + ' is empty!')
             return ImageCollection()
                 
-        iCollection = ImageCollection()
+        iCol = ImageCollection()
         separatorAttrVals = []
 
         for file in dcmFiles:
@@ -158,7 +159,7 @@ class Preprocessor:
                             else:
                                 continue
                         img = Preprocessor._createImage(tempDcm)
-                        iCollection.Views.append(img)
+                        iCol.Views.append(img)
                     except AttributeError as ex:
                         # I found some images, what is not correct with MicroDicom,
                         # but processable with pydicom
@@ -169,7 +170,9 @@ class Preprocessor:
                         raise ex
             except Exception:
                 logger.error('Broken: {}'.format(filePath), exc_info=True)
-        return iCollection
+            
+            iCol.Views = Preprocessor._filterCloseSameImages(iCol.Views, separatorAttr, goalAmount)
+        return iCol
 
     @staticmethod
     def _createImage(dcmFile):
@@ -220,4 +223,39 @@ class Preprocessor:
             if isinstance(dcmAttr, list):
                 return [Preprocessor._convertDicomType(convertableTypes, x) for x in dcmAttr]
         return dcmAttr
+    
+    @staticmethod
+    def _filterCloseSameImages(views, sepAttr, goalAmount):
+        lenViews = len(views)
+        dropableAmount = lenViews - goalAmount
+        if goalAmount >= lenViews or dropableAmount <= 0:
+            return views
+        
+        testAttr = views[0].Attributes[sepAttr]
+        if not isinstance(testAttr, list) \
+            or not isinstance(testAttr[0], (int, float, np.float, Decimal)):
+            return views
+
+        ipValues = {}
+        pairGenerator = ((x, y) for x in range(lenViews) for y in range(lenViews) if y > x)
+        for a, b in pairGenerator:
+            x = views[a].Attributes[sepAttr]
+            y = views[b].Attributes[sepAttr]
+            innerProduct = np.inner(x, y)
+            ipValues.update({innerProduct: b})
+
+        drop = []
+        for ip in sorted(ipValues, reverse=True):
+            if len(drop) == dropableAmount: break
+            index = ipValues[ip]
+            if index not in drop:
+                drop.append(index)
+
+        logger.debug('len(views): {} dropableAmount: {}, drop: {}'.format(len(views), dropableAmount, str(drop)))
+        logger.debug(json.dumps(ipValues, indent=4, sort_keys=True))
+
+        for i in sorted(drop, reverse=True):
+            del views[i]
+        
+        return views
                 

@@ -4,11 +4,13 @@
     "image_types": {
         "la": {
             "folder": "la",
-            "separator_attr": "ImageOrientationPatient"
+            "separator_attr": "ImageOrientationPatient",
+            "goal_amount": 3
         },
         "sa": {
             "folder": "sa/images",
-            "separator_attr": "ImageOrientationPatient"
+            "separator_attr": "ImageOrientationPatient",
+            "goal_amount": 1
         }
     },
     "pickle_folder": "/media/Data/Dipterv_MRI/test_pickle",

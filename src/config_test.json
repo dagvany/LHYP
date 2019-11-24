@@ -4,7 +4,8 @@
     "image_types": {
         "la": {
             "folder": "la",
-            "separator_attr": "ImageOrientationPatient"
+            "separator_attr": "ImageOrientationPatient",
+            "goal_amount": 3
         }
     },
     "pickle_folder": "/media/Data/Dipterv_MRI/test/pickle",
