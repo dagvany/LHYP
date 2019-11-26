@@ -6,6 +6,10 @@ from preprocessor import Preprocessor
 from matplotlib import pyplot as plt
 import math
 import csv
+import autoencoder
+import random
+import sys
+import cv2
 
 def drawPatientImageType(imgType, patients, labelAttr = None):
     sepAttr = config['image_types'][imgType]["separator_attr"]
@@ -54,8 +58,30 @@ def preprocess(config):
     for line in main.preprocessPatiens(config)[0]:
         print(line)
 
-preprocess(config)
+#preprocess(config)
 patients = main.unSerializePatients(config)
-drawPatientImageType('la', patients)
+#drawPatientImageType('la', patients)
 #createCSV('la', patients)
 
+#batchSize = 4
+height = sys.maxsize
+width = sys.maxsize
+patientsImages = []
+for p in patients:
+    for imgType in config['image_types']:
+        for img in p.ImageTypes[imgType].Views:
+            patientsImages.append(img.PixelArray)
+            h, w = img.PixelArray.shape
+            if h < height: height = h
+            if w < width: width = w
+
+#TEST:
+height = width = 110
+for i in range(len(patientsImages)):
+    patientsImages[i] = cv2.resize(patientsImages[i], (height, width), interpolation=cv2.INTER_LANCZOS4)
+
+random.shuffle(patientsImages)
+#batches = [patientsImages[e:e+batchSize] for e in range(0,len(patientsImages),batchSize)]
+print('h: {}, w: {}, images: {}'.format(height, width, len(patientsImages)))
+
+autoencoder.run(patientsImages, height, width, 100, 50, 500, 6, 1e-3)
