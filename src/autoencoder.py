@@ -56,6 +56,9 @@ def run(
     path = '/media/Data/Dipterv_MRI/test/ae/{:04d}_{}_{}.png'
     pathFinal = '/media/Data/Dipterv_MRI/test/ae/final_{}_{}.png'
     #for epoch in range(numEpochs):
+    original = images[len(images)-batchSize:len(images)].view(-1, 1, height*width)
+    _saveMaxrixToImg(original, height, width,
+        pathFinal.format(0, 'orig', 0))
     epoch = -1
     while True:
         epoch = epoch + 1
