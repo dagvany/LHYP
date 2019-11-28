@@ -5,7 +5,7 @@ from enum import Enum
 
 class Pathology(Enum):
     UNDEFINED     = -1
-    NORM          = 0
+    NORMAL        = 0
     HCM           = 1
     AMY           = 2
     AMYLOIDOSIS   = 2
