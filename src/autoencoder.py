@@ -50,9 +50,8 @@ def run(
     modelFolder,
     cudaSeed):
     inputLayerSize = height * width
-    if cudaSeed > 0:
-        device = 'cuda'
-        torch.manual_seed(cudaSeed)
+    if cudaSeed >= 0:
+        device = 'cuda:{}'.format(cudaSeed)
     else:
         device = 'cpu'
 
@@ -64,7 +63,7 @@ def run(
         weight_decay=1e-5)
     
     images = torch.Tensor(images)
-    path = os.path.join(imgFolder, 'ae/{:04d}_{}_{}.png')
+    path = os.path.join(imgFolder, '{:04d}_{}_{}.png')
     pathFinal = os.path.join(imgFolder, 'final_{}_{}.png')
     original = images[len(images)-batchSize:len(images)].view(-1, 1, height*width)
     _saveMaxrixToImg(original, height, width,
@@ -75,7 +74,7 @@ def run(
             data = original.to(device)
             # forward
             output = model(data)
-            loss = criterion(output, original)
+            loss = criterion(output, data)
             # backward
             optimizer.zero_grad()
             loss.backward()
