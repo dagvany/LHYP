@@ -91,4 +91,3 @@ if __name__ == '__main__':
         logger.info('\n'.join(patientStats[0]))
     else:
         patients = unSerializePatients(config)
-    

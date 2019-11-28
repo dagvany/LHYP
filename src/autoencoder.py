@@ -6,6 +6,8 @@ import torchvision
 from torch import nn
 from torch.autograd import Variable
 from torchvision.utils import save_image
+import os
+import time
 from utils import get_logger
 
 logger = get_logger(__name__)
@@ -43,9 +45,18 @@ def run(
     latentLayerSize,
     numEpochs,
     batchSize,
-    learningRate):
+    learningRate,
+    imgFolder,
+    modelFolder,
+    cudaSeed):
     inputLayerSize = height * width
-    model = AutoEncoder(height*width, inputLayerSize, latentLayerSize).cpu()
+    if cudaSeed > 0:
+        device = 'cuda'
+        torch.manual_seed(cudaSeed)
+    else:
+        device = 'cpu'
+
+    model = AutoEncoder(height*width, inputLayerSize, latentLayerSize).to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -53,19 +64,17 @@ def run(
         weight_decay=1e-5)
     
     images = torch.Tensor(images)
-    path = '/media/Data/Dipterv_MRI/test/ae/{:04d}_{}_{}.png'
-    pathFinal = '/media/Data/Dipterv_MRI/test/ae/final_{}_{}.png'
-    #for epoch in range(numEpochs):
+    path = os.path.join(imgFolder, 'ae/{:04d}_{}_{}.png')
+    pathFinal = os.path.join(imgFolder, 'final_{}_{}.png')
     original = images[len(images)-batchSize:len(images)].view(-1, 1, height*width)
     _saveMaxrixToImg(original, height, width,
         pathFinal.format(0, 'orig', 0))
-    epoch = -1
-    while True:
-        epoch = epoch + 1
+    for epoch in range(numEpochs):
         for i in range(0, len(images), batchSize):
             original = images[i:i+batchSize].view(-1, 1, height*width)
+            data = original.to(device)
             # forward
-            output = model(original)
+            output = model(data)
             loss = criterion(output, original)
             # backward
             optimizer.zero_grad()
@@ -76,10 +85,13 @@ def run(
         if (epoch+1) % 10 == 0:
             _saveMaxrixToImg(output.cpu().data, height, width,
                 path.format(epoch+1, 'res', loss.data))
-        if loss.data < 0.05:
-            break
     _saveMaxrixToImg(output.cpu().data, height, width,
         pathFinal.format(epoch+1, 'res', loss.data))
+    
+    
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    modelPath = os.path.join(modelFolder, 'ae_{}.pt').format(timestr)
+    torch.save(model.state_dict(), modelPath)
 
 def _convertToImg(vector, height, width):
     vector = 0.5 * (vector + 1)

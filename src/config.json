@@ -1,5 +1,5 @@
 {
-    "patients_preprocessing": true,
+    "patients_preprocessing": false,
     "image_folder": "/media/Data/Dipterv_MRI/test_mri_src",
     "image_types": {
         "la": {
@@ -14,5 +14,6 @@
         }
     },
     "pickle_folder": "/media/Data/Dipterv_MRI/test_pickle",
-    "failed_pickle_folder": "/media/Data/Dipterv_MRI/failed_pickle"
+    "failed_pickle_folder": "/media/Data/Dipterv_MRI/failed_pickle",
+    "pytorch_model_folder": "/media/Data/Dipterv_MRI/pytorch_model"
 }

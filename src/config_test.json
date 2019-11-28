@@ -1,5 +1,4 @@
 {
-    "patients_preprocessing": true,
     "image_folder": "/media/Data/Dipterv_MRI/test/mri",
     "image_types": {
         "la": {
@@ -9,5 +8,10 @@
         }
     },
     "pickle_folder": "/media/Data/Dipterv_MRI/test/pickle",
-    "failed_pickle_folder": "/media/Data/Dipterv_MRI/test/failed"
+    "failed_pickle_folder": "/media/Data/Dipterv_MRI/test/failed",
+    "pytorch_model_folder": "/media/Data/Dipterv_MRI/test/pytorch_model",
+    "img_folder": "/media/Data/Dipterv_MRI/test/ae",
+    "cuda_seed": -1,
+    "batch_size": 8,
+    "epoch": 500
 }

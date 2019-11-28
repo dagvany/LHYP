@@ -63,7 +63,6 @@ patients = main.unSerializePatients(config)
 #drawPatientImageType('la', patients)
 #createCSV('la', patients)
 
-#batchSize = 4
 height = sys.maxsize
 width = sys.maxsize
 patientsImages = []
@@ -75,13 +74,19 @@ for p in patients:
             if h < height: height = h
             if w < width: width = w
 
-#TEST:
-height = width = 110
+height = width = 10
 for i in range(len(patientsImages)):
     patientsImages[i] = cv2.resize(patientsImages[i], (height, width), interpolation=cv2.INTER_LANCZOS4)
 
 random.shuffle(patientsImages)
-#batches = [patientsImages[e:e+batchSize] for e in range(0,len(patientsImages),batchSize)]
 print('h: {}, w: {}, images: {}'.format(height, width, len(patientsImages)))
 
-autoencoder.run(patientsImages, height, width, 100, 50, 500, 6, 1e-3)
+autoencoder.run(patientsImages, height, width, 
+    intermediateLayerSize=100,
+    latentLayerSize=50,
+    numEpochs=config['epoch'],
+    batchSize=config['batch_size'],
+    learningRate=1e-3,
+    imgFolder=config['img_folder'],
+    modelFolder=config['pytorch_model_folder'],
+    cudaSeed=config['cuda_seed'])
