@@ -1,5 +1,6 @@
 # Custom files, folders to ignore
 .vscode/
+.idea/
 *.log
 
 # Byte-compiled / optimized / DLL files

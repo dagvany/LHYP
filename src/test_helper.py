@@ -11,7 +11,8 @@ import random
 import sys
 import cv2
 
-def drawPatientImageType(imgType, patients, labelAttr = None):
+
+def drawPatientImageType(imgType, patients, labelAttr=None):
     sepAttr = config['image_types'][imgType]["separator_attr"]
     for p in patients:
         cols = 3
@@ -26,13 +27,14 @@ def drawPatientImageType(imgType, patients, labelAttr = None):
             cols = rows
 
         for i, img in enumerate(p.ImageTypes[imgType].Views):
-            fig.add_subplot(rows, cols, i+1)
+            fig.add_subplot(rows, cols, i + 1)
             if labelAttr:
                 plt.xlabel(str(img.Attributes[labelAttr]))
             else:
                 plt.xlabel('\n'.join(str(img.Attributes[sepAttr]).split(',')))
             plt.imshow(img.PixelArray, cmap='gray')
         plt.show()
+
 
 def createCSV(imgType, patients):
     fieldnames = []
@@ -54,14 +56,16 @@ def createCSV(imgType, patients):
 
 config = Preprocessor.getConfiguration("config_test.json")
 
+
 def preprocess(config):
     for line in main.preprocessPatiens(config)[0]:
         print(line)
 
-#preprocess(config)
+
+# preprocess(config)
 patients = main.unSerializePatients(config)
-#drawPatientImageType('la', patients)
-#createCSV('la', patients)
+# drawPatientImageType('la', patients)
+# createCSV('la', patients)
 
 height = sys.maxsize
 width = sys.maxsize
@@ -81,12 +85,12 @@ for i in range(len(patientsImages)):
 random.shuffle(patientsImages)
 print('h: {}, w: {}, images: {}'.format(height, width, len(patientsImages)))
 
-autoencoder.run(patientsImages, height, width, 
-    intermediateLayerSize=100,
-    latentLayerSize=50,
-    numEpochs=config['epoch'],
-    batchSize=config['batch_size'],
-    learningRate=1e-3,
-    imgFolder=config['img_folder'],
-    modelFolder=config['pytorch_model_folder'],
-    cudaSeed=config['cuda_seed'])
+autoencoder.run(patientsImages, height, width,
+                intermediateLayerSize=100,
+                latentLayerSize=50,
+                numEpochs=config['epoch'],
+                batchSize=config['batch_size'],
+                learningRate=1e-3,
+                imgFolder=config['img_folder'],
+                modelFolder=config['pytorch_model_folder'],
+                cudaSeed=config['cuda_seed'])
