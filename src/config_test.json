@@ -12,6 +12,9 @@
     "pytorch_model_folder": "/media/Data/Dipterv_MRI/test/pytorch_model",
     "img_folder": "/media/Data/Dipterv_MRI/test/ae",
     "cuda_seed": -1,
-    "batch_size": 8,
-    "epoch": 500
+    "batch_size": 4,
+    "epoch": 1500,
+    "goal_loss": 1.0,
+    "learning_rate": 1e-3,
+    "weight_decay": 1e-5
 }

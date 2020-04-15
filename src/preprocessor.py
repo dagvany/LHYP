@@ -28,7 +28,7 @@ class Preprocessor:
         except FileNotFoundError:
             msg = jsonFileLocation + ' is not found!'
             logger.critical(msg)
-            print(mgs)
+            print(msg)
             exit(1)
         except ValueError:
             msg = jsonFileLocation + ' JSON format is not correct!'
@@ -258,4 +258,3 @@ class Preprocessor:
             del views[i]
         
         return views
-                

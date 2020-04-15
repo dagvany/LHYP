@@ -3,13 +3,12 @@
 
 import main
 from preprocessor import Preprocessor
+import convae
+
 from matplotlib import pyplot as plt
 import math
 import csv
-import autoencoder
 import random
-import sys
-import cv2
 
 
 def drawPatientImageType(imgType, patients, labelAttr=None):
@@ -67,30 +66,17 @@ patients = main.unSerializePatients(config)
 # drawPatientImageType('la', patients)
 # createCSV('la', patients)
 
-height = sys.maxsize
-width = sys.maxsize
+cropSize = 130
 patientsImages = []
 for p in patients:
     for imgType in config['image_types']:
         for img in p.ImageTypes[imgType].Views:
-            patientsImages.append(img.PixelArray)
             h, w = img.PixelArray.shape
-            if h < height: height = h
-            if w < width: width = w
-
-height = width = 10
-for i in range(len(patientsImages)):
-    patientsImages[i] = cv2.resize(patientsImages[i], (height, width), interpolation=cv2.INTER_LANCZOS4)
+            y = int((h-cropSize)/2)
+            x = int((w-cropSize)/2)
+            crop_img = img.PixelArray[y:y+cropSize, x:x+cropSize]
+            patientsImages.append(crop_img)
 
 random.shuffle(patientsImages)
-print('h: {}, w: {}, images: {}'.format(height, width, len(patientsImages)))
 
-autoencoder.run(patientsImages, height, width,
-                intermediateLayerSize=100,
-                latentLayerSize=50,
-                numEpochs=config['epoch'],
-                batchSize=config['batch_size'],
-                learningRate=1e-3,
-                imgFolder=config['img_folder'],
-                modelFolder=config['pytorch_model_folder'],
-                cudaSeed=config['cuda_seed'])
+convae.run(patientsImages, config)

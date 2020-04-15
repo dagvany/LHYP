@@ -2,74 +2,96 @@
 # -*- coding: utf-8 -*-
 
 import torch
-import torchvision
 from torch import nn
 from torchvision.utils import save_image
+
 import os
+import sys
+from pathlib import Path
 import time
+import numpy as np
+
 from utils import get_logger
 
 logger = get_logger(__name__)
 
 
 class ConvAE(nn.Module):
-    def __init__(self, inputSize, intermediateSize, latentSize):
+    def __init__(self):
         super(ConvAE, self).__init__()
 
-        self.encoder = nn.Sequential(
-            nn.Conv2d(inputSize, intermediateSize, kernel_size=2, stride=3, padding=0),
+        self.encoderConv = nn.Sequential(
+            nn.Conv2d(1, 1, 4, stride=1, padding=0),
             nn.ReLU(True),
-            nn.Conv2d(intermediateSize, latentSize, kernel_size=2, stride=3, padding=0),
-            nn.ReLU(True))
+            nn.Conv2d(1, 1, 4, stride=2, padding=0),
+            nn.ReLU(True),
+            nn.Conv2d(1, 1, 3, stride=2, padding=0),
+            nn.Tanh(),
+        )
 
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(latentSize, intermediateSize, stride=3),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(intermediateSize, intermediateSize, stride=3, padding=0),
-            nn.ReLU(True))
+        self.encoderLin = nn.Sequential(
+            nn.Linear(30*30, 100),
+            nn.Softplus()
+        )
+
+        self.decoderLin = nn.Sequential(
+            nn.Linear(30*30, 130*130),
+            nn.Softplus()
+        )
 
     def forward(self, bachedInputs):
-        encoded = self.encoder(bachedInputs)
-        # for l in encoded:
-        #    logger.info(l[0])
-        decoded = self.decoder(encoded)
+        batchSize = bachedInputs.shape[0]
+        encodedConv = self.encoderConv(bachedInputs)
+
+        decodedLin = self.decoderLin(encodedConv.view((batchSize, -1)))
+        decoded = decodedLin.view(batchSize, 1, 130, 130)
         return decoded
 
 
-def run(
-        images,
-        height,
-        width,
-        intermediateSize,
-        latentSize,
-        numEpochs,
-        batchSize,
-        learningRate,
-        imgFolder,
-        modelFolder,
-        cudaSeed):
-    inputSize = height * width
-    if cudaSeed >= 0:
-        device = 'cuda:{}'.format(cudaSeed)
+def run(patientsImages, config):
+    if config['cuda_seed'] >= 0:
+        device = 'cuda:{}'.format(config['cuda_seed'])
     else:
         device = 'cpu'
 
-    model = ConvAE(inputSize, intermediateSize, latentSize).to(device)
+    model = ConvAE().to(device)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(
-        model.parameters(),
-        lr=learningRate,
-        weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
 
-    images = torch.Tensor(images)
-    path = os.path.join(imgFolder, '{:04d}_{}_{}.png')
-    pathFinal = os.path.join(imgFolder, 'final_{}_{}.png')
-    original = images[len(images) - batchSize:len(images)].view(-1, 1, height * width)
-    _saveMaxrixToImg(original, height, width,
-                     pathFinal.format(0, 'orig', 0))
-    for epoch in range(numEpochs):
-        for i in range(0, len(images), batchSize):
-            original = images[i:i + batchSize].view(-1, 1, height * width)
+    images = torch.Tensor(patientsImages)
+    height = patientsImages[0].shape[0]
+    width = patientsImages[0].shape[1]
+    testSetSize = int(np.ceil(config['batch_size']/len(patientsImages)*0.25)) * config['batch_size']
+    testSet = images[0: testSetSize]
+    trainSet = images[testSetSize+1:]
+
+    msg = 'shape: {}, trainSet: {}, testSet: {}'.format(patientsImages[0].shape, len(trainSet), len(testSet))
+    print(msg)
+    logger.info(msg)
+
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    config["img_folder"] = os.path.join(config["img_folder"], timestr)
+    os.mkdir(config["img_folder"])
+    path = os.path.join(config["img_folder"], '{:04d}_{}_{}.png')
+    pathFinal = os.path.join(config["img_folder"], '{:04d}_final_{}.png')
+
+    original = trainSet[0:config["batch_size"]].view(-1, 1, height, width)
+    save_image(original, os.path.join(config["img_folder"], 'original.png'), normalize=True)
+
+    l = sys.maxsize
+    epoch = 0
+    saveImage = False
+    tempImage = None
+    while l > config['goal_loss']:
+        if 1 < config['epoch'] == epoch:
+            break
+        epoch += 1
+
+        if epoch % 25 == 0:
+            saveImage = True
+
+        for i in range(0, len(trainSet), config["batch_size"]):
+            original = trainSet[i:i + config["batch_size"]].view(-1, 1, height, width)
             data = original.to(device)
             # forward
             output = model(data)
@@ -78,26 +100,30 @@ def run(
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        logger.info('epoch [{}/{}], loss:{:.4f}'
-                    .format(epoch + 1, numEpochs, loss.data))
-        if (epoch + 1) % 10 == 0:
-            _saveMaxrixToImg(output.cpu().data, height, width,
-                             path.format(epoch + 1, 'res', loss.data))
-    _saveMaxrixToImg(output.cpu().data, height, width,
-                     pathFinal.format(epoch + 1, 'res', loss.data))
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    modelPath = os.path.join(modelFolder, 'cae_{}.pt').format(timestr)
+            l = loss.data # while
+            if saveImage:
+                save_image(output.cpu().data, path.format(epoch, 'train', l), normalize=True)
+                logger.info('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, config["epoch"], loss.data))
+                saveImage = False
+            elif i == 0:
+                tempImage = output.cpu().data
+
+
+    save_image(tempImage, pathFinal.format(epoch, l), normalize=True)
+
+    for i in range(len(testSet)):
+        original = testSet[i].view(-1, 1, height, width)
+        data = original.to(device)
+         # forward
+        output = model(data)
+        loss = criterion(output, data)
+
+        image = torch.cat([original, output.cpu().data], dim=0)
+        save_image(image, path.format(epoch, 'test', loss.data), normalize=True)
+        logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, testSetSize, loss.data))
+
+    Path(config["pytorch_model_folder"]).mkdir(parents=True, exist_ok=True)
+    modelPath = os.path.join(config["pytorch_model_folder"], 'cae_la_{}.pt').format(timestr)
     torch.save(model.state_dict(), modelPath)
 
-
-def _convertToImg(vector, height, width):
-    vector = 0.5 * (vector + 1)
-    vector = vector.clamp(0, 1)
-    img = vector.view(vector.size(0), 1, height, width)
-    return img
-
-
-def _saveMaxrixToImg(matrix, height, width, path):
-    pic = _convertToImg(matrix, height, width)
-    save_image(pic, path)
