@@ -61,7 +61,7 @@ def run(patientsImages, config):
     images = torch.Tensor(patientsImages)
     height = patientsImages[0].shape[0]
     width = patientsImages[0].shape[1]
-    testSetSize = int(np.ceil(config['batch_size']/len(patientsImages)*0.25)) * config['batch_size']
+    testSetSize = int(np.ceil((len(patientsImages)*0.25)/config['batch_size'])) * config['batch_size']
     testSet = images[0: testSetSize]
     trainSet = images[testSetSize+1:]
 
