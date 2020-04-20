@@ -21,11 +21,11 @@ class ConvAE(nn.Module):
         super(ConvAE, self).__init__()
 
         self.encoderConv = nn.Sequential(
-            nn.Conv2d(1, 1, 4, stride=1, padding=0),
+            nn.Conv2d(1, 1, kernel_size=4, stride=1, padding=0),
             nn.ReLU(True),
-            nn.Conv2d(1, 1, 4, stride=2, padding=0),
+            nn.Conv2d(1, 1, kernel_size=4, stride=2, padding=0),
             nn.ReLU(True),
-            nn.Conv2d(1, 1, 3, stride=2, padding=0),
+            nn.Conv2d(1, 1, kernel_size=3, stride=2, padding=0),
             nn.Tanh(),
         )
 
@@ -39,12 +39,20 @@ class ConvAE(nn.Module):
             nn.Softplus()
         )
 
+        self.decoderDeConv = nn.Sequential(
+            nn.ConvTranspose2d(1, 1, kernel_size=5, stride=2, padding=0),
+            nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=0),
+            nn.ConvTranspose2d(1, 1, kernel_size=3, stride=1, padding=0)
+        )
+
     def forward(self, bachedInputs):
         batchSize = bachedInputs.shape[0]
         encodedConv = self.encoderConv(bachedInputs)
 
-        decodedLin = self.decoderLin(encodedConv.view((batchSize, -1)))
-        decoded = decodedLin.view(batchSize, 1, 130, 130)
+        #decodedLin = self.decoderLin(encodedConv.view((batchSize, -1)))
+        #decoded = decodedLin.view(batchSize, 1, 130, 130)
+        decoded = self.decoderDeConv(encodedConv)
+        #print("Encoded: {} Decoded: {}".format(encodedConv.shape, decoded.shape))
         return decoded
 
 
@@ -61,9 +69,9 @@ def run(patientsImages, config):
     images = torch.Tensor(patientsImages)
     height = patientsImages[0].shape[0]
     width = patientsImages[0].shape[1]
-    testSetSize = int(np.ceil((len(patientsImages)*0.25)/config['batch_size'])) * config['batch_size']
-    testSet = images[0: testSetSize]
-    trainSet = images[testSetSize+1:]
+    trainSetSize = int(np.ceil((len(patientsImages)*0.75)/config['batch_size'])) * config['batch_size']
+    trainSet = images[0: trainSetSize]
+    testSet = images[trainSetSize+1: ]
 
     msg = 'shape: {}, trainSet: {}, testSet: {}'.format(patientsImages[0].shape, len(trainSet), len(testSet))
     print(msg)
@@ -104,7 +112,7 @@ def run(patientsImages, config):
             l = loss.data # while
             if saveImage:
                 save_image(output.cpu().data, path.format(epoch, 'train', l), normalize=True)
-                logger.info('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, config["epoch"], loss.data))
+                logger.info('epoch [{}/{}], loss:{:.4f}'.format(epoch, config["epoch"], loss.data))
                 saveImage = False
             elif i == 0:
                 tempImage = output.cpu().data
