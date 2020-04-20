@@ -45,6 +45,18 @@ class ConvAE(nn.Module):
             nn.ConvTranspose2d(1, 1, kernel_size=3, stride=1, padding=0)
         )
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                if m.bias is not None:
+                    nn.init.uniform(m.bias)
+                nn.init.xavier_uniform(m.weight)
+
+            if isinstance(m, nn.ConvTranspose2d):
+                if m.bias is not None:
+                    nn.init.uniform(m.bias)
+                nn.init.xavier_uniform(m.weight)
+
+
     def forward(self, bachedInputs):
         batchSize = bachedInputs.shape[0]
         encodedConv = self.encoderConv(bachedInputs)
@@ -95,7 +107,7 @@ def run(patientsImages, config):
             break
         epoch += 1
 
-        if epoch % 25 == 0:
+        if epoch % 100 == 0:
             saveImage = True
 
         for i in range(0, len(trainSet), config["batch_size"]):
