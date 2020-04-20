@@ -22,11 +22,11 @@ class ConvAE(nn.Module):
 
         self.encoderConv = nn.Sequential(
             nn.Conv2d(1, 1, kernel_size=4, stride=1, padding=0),
-            nn.ReLU(True),
+            nn.ELU(),
             nn.Conv2d(1, 1, kernel_size=4, stride=2, padding=0),
-            nn.ReLU(True),
+            nn.ELU(),
             nn.Conv2d(1, 1, kernel_size=3, stride=2, padding=0),
-            nn.Tanh(),
+            nn.ELU()
         )
 
         self.encoderLin = nn.Sequential(
@@ -41,20 +41,23 @@ class ConvAE(nn.Module):
 
         self.decoderDeConv = nn.Sequential(
             nn.ConvTranspose2d(1, 1, kernel_size=5, stride=2, padding=0),
+            nn.ELU(),
             nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=0),
-            nn.ConvTranspose2d(1, 1, kernel_size=3, stride=1, padding=0)
+            nn.ELU(),
+            nn.ConvTranspose2d(1, 1, kernel_size=3, stride=1, padding=0),
+            nn.ELU()
         )
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 if m.bias is not None:
                     nn.init.uniform(m.bias)
-                nn.init.xavier_uniform(m.weight)
+                #nn.init.xavier_uniform(m.weight)
 
             if isinstance(m, nn.ConvTranspose2d):
                 if m.bias is not None:
                     nn.init.uniform(m.bias)
-                nn.init.xavier_uniform(m.weight)
+                #nn.init.xavier_uniform(m.weight)
 
 
     def forward(self, bachedInputs):
