@@ -21,31 +21,50 @@ class ConvAE(nn.Module):
         super(ConvAE, self).__init__()
 
         self.encoderConv = nn.Sequential(
-            nn.Conv2d(1, 1, kernel_size=4, stride=1, padding=0),
-            nn.ELU(),
-            nn.Conv2d(1, 1, kernel_size=4, stride=2, padding=0),
-            nn.ELU(),
-            nn.Conv2d(1, 1, kernel_size=3, stride=2, padding=0),
-            nn.ELU()
-        )
+            nn.BatchNorm2d(1),
+            nn.Conv2d(1, 8, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
 
-        self.encoderLin = nn.Sequential(
-            nn.Linear(30*30, 100),
-            nn.Softplus()
-        )
+            nn.BatchNorm2d(8),
+            nn.Conv2d(8, 16, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
 
-        self.decoderLin = nn.Sequential(
-            nn.Linear(30*30, 130*130),
-            nn.Softplus()
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 32, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
+
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.SELU(),
+
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.SELU(),
+
+            # Instead of MaxPools
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 16, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(16, 8, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(8, 1, kernel_size=1, stride=1, padding=0),
+            nn.SELU(),
         )
 
         self.decoderDeConv = nn.Sequential(
-            nn.ConvTranspose2d(1, 1, kernel_size=5, stride=2, padding=0),
-            nn.ELU(),
-            nn.ConvTranspose2d(1, 1, kernel_size=4, stride=2, padding=0),
-            nn.ELU(),
-            nn.ConvTranspose2d(1, 1, kernel_size=3, stride=1, padding=0),
-            nn.ELU()
+            nn.ConvTranspose2d(1, 8, kernel_size=1, stride=1, padding=0),
+            nn.ConvTranspose2d(8, 16, kernel_size=1, stride=1, padding=0),
+            nn.ConvTranspose2d(16, 32, kernel_size=1, stride=1, padding=0),
+            nn.SELU(),
+
+            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.SELU(),
+            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.SELU(),
+            nn.ConvTranspose2d(32, 16, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
+            nn.ConvTranspose2d(16, 8, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
+            nn.ConvTranspose2d(8, 1, kernel_size=2, stride=1, padding=0),
+            nn.SELU(),
         )
 
         for m in self.modules():
@@ -84,7 +103,7 @@ def run(patientsImages, config):
     images = torch.Tensor(patientsImages)
     height = patientsImages[0].shape[0]
     width = patientsImages[0].shape[1]
-    trainSetSize = int(np.ceil((len(patientsImages)*0.75)/config['batch_size'])) * config['batch_size']
+    trainSetSize = int(np.round((len(patientsImages)*0.75)/config['batch_size'])) * config['batch_size']
     trainSet = images[0: trainSetSize]
     testSet = images[trainSetSize+1: ]
 
@@ -127,7 +146,7 @@ def run(patientsImages, config):
             l = loss.data # while
             if saveImage:
                 save_image(output.cpu().data, path.format(epoch, 'train', l), normalize=True)
-                logger.info('epoch [{}/{}], loss:{:.4f}'.format(epoch, config["epoch"], loss.data))
+                logger.info('epoch [{}/{}], loss: {:.4f}'.format(epoch, config["epoch"], loss.data))
                 saveImage = False
             elif i == 0:
                 tempImage = output.cpu().data
@@ -144,7 +163,7 @@ def run(patientsImages, config):
 
         image = torch.cat([original, output.cpu().data], dim=0)
         save_image(image, path.format(epoch, 'test', loss.data), normalize=True)
-        logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, testSetSize, loss.data))
+        logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, trainSetSize, loss.data))
 
     Path(config["pytorch_model_folder"]).mkdir(parents=True, exist_ok=True)
     modelPath = os.path.join(config["pytorch_model_folder"], 'cae_la_{}.pt').format(timestr)

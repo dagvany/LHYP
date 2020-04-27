@@ -13,8 +13,8 @@
     "img_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/ae",
     "cuda_seed": -1,
     "batch_size": 4,
-    "epoch": -1,
-    "goal_loss": 1.0,
+    "epoch": 1500,
+    "goal_loss": 10.0,
     "learning_rate": 1e-3,
     "weight_decay": 1e-5
 }
