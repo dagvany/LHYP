@@ -3,10 +3,12 @@
 
 import torch
 from torch import nn
-from torchvision.utils import save_image
+import torchvision.utils as vutils
+from tensorboardX import SummaryWriter
 
 import os
 import sys
+import pickle
 from pathlib import Path
 import time
 import numpy as np
@@ -14,7 +16,6 @@ import numpy as np
 from utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class ConvAE(nn.Module):
     def __init__(self):
@@ -34,30 +35,26 @@ class ConvAE(nn.Module):
             nn.SELU(),
 
             nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.Conv2d(32, 16, kernel_size=3, stride=2, padding=0),
             nn.SELU(),
 
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 8, kernel_size=3, stride=2, padding=0),
             nn.SELU(),
 
-            # Instead of MaxPools
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 16, kernel_size=1, stride=1, padding=0),
-            nn.Conv2d(16, 8, kernel_size=1, stride=1, padding=0),
+            # Instead of MaxPool
+            nn.BatchNorm2d(8),
             nn.Conv2d(8, 1, kernel_size=1, stride=1, padding=0),
             nn.SELU(),
         )
 
         self.decoderDeConv = nn.Sequential(
             nn.ConvTranspose2d(1, 8, kernel_size=1, stride=1, padding=0),
-            nn.ConvTranspose2d(8, 16, kernel_size=1, stride=1, padding=0),
-            nn.ConvTranspose2d(16, 32, kernel_size=1, stride=1, padding=0),
             nn.SELU(),
 
-            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.ConvTranspose2d(8, 16, kernel_size=3, stride=2, padding=0),
             nn.SELU(),
-            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=0),
+            nn.ConvTranspose2d(16, 32, kernel_size=3, stride=2, padding=0),
             nn.SELU(),
             nn.ConvTranspose2d(32, 16, kernel_size=2, stride=1, padding=0),
             nn.SELU(),
@@ -70,24 +67,19 @@ class ConvAE(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 if m.bias is not None:
-                    nn.init.uniform(m.bias)
-                #nn.init.xavier_uniform(m.weight)
+                    #nn.init.uniform(m.bias)
+                    nn.init.xavier_uniform(m.weight)
 
             if isinstance(m, nn.ConvTranspose2d):
                 if m.bias is not None:
-                    nn.init.uniform(m.bias)
-                #nn.init.xavier_uniform(m.weight)
+                    #nn.init.uniform(m.bias)
+                    nn.init.xavier_uniform(m.weight)
 
 
     def forward(self, bachedInputs):
-        batchSize = bachedInputs.shape[0]
-        encodedConv = self.encoderConv(bachedInputs)
-
-        #decodedLin = self.decoderLin(encodedConv.view((batchSize, -1)))
-        #decoded = decodedLin.view(batchSize, 1, 130, 130)
-        decoded = self.decoderDeConv(encodedConv)
-        #print("Encoded: {} Decoded: {}".format(encodedConv.shape, decoded.shape))
-        return decoded
+        latent = self.encoderConv(bachedInputs)
+        decoded = self.decoderDeConv(latent)
+        return decoded, latent
 
 
 def run(patientsImages, config):
@@ -96,6 +88,8 @@ def run(patientsImages, config):
     else:
         device = 'cpu'
 
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    writer = SummaryWriter(os.path.join(config["tensoardboardx_folder"], timestr))
     model = ConvAE().to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
@@ -111,14 +105,9 @@ def run(patientsImages, config):
     print(msg)
     logger.info(msg)
 
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    config["img_folder"] = os.path.join(config["img_folder"], timestr)
-    os.mkdir(config["img_folder"])
-    path = os.path.join(config["img_folder"], '{:04d}_{}_{}.png')
-    pathFinal = os.path.join(config["img_folder"], '{:04d}_final_{}.png')
-
     original = trainSet[0:config["batch_size"]].view(-1, 1, height, width)
-    save_image(original, os.path.join(config["img_folder"], 'original.png'), normalize=True)
+    img = vutils.make_grid(original, normalize=True)
+    writer.add_image('train', img, 0)
 
     l = sys.maxsize
     epoch = 0
@@ -129,14 +118,14 @@ def run(patientsImages, config):
             break
         epoch += 1
 
-        if epoch % 100 == 0:
+        if epoch % 25 == 0:
             saveImage = True
 
         for i in range(0, len(trainSet), config["batch_size"]):
             original = trainSet[i:i + config["batch_size"]].view(-1, 1, height, width)
             data = original.to(device)
             # forward
-            output = model(data)
+            output, latent = model(data)
             loss = criterion(output, data)
             # backward
             optimizer.zero_grad()
@@ -144,28 +133,66 @@ def run(patientsImages, config):
             optimizer.step()
 
             l = loss.data # while
+
+            writer.add_scalar('Loss/train', l, epoch)
+
             if saveImage:
-                save_image(output.cpu().data, path.format(epoch, 'train', l), normalize=True)
+                img = vutils.make_grid(output.cpu().data, normalize=True)
+                writer.add_image('train', img, epoch)
                 logger.info('epoch [{}/{}], loss: {:.4f}'.format(epoch, config["epoch"], loss.data))
                 saveImage = False
             elif i == 0:
                 tempImage = output.cpu().data
 
+    img = vutils.make_grid(tempImage, normalize=True)
+    writer.add_image('train', img, epoch)
 
-    save_image(tempImage, pathFinal.format(epoch, l), normalize=True)
+    writer.add_hparams(
+        {
+            'optim': 'adam',
+            'bsize': config['batch_size'],
+            'lr': config['learning_rate'],
+            'wd': config['weight_decay'],
+            'epoch': epoch
+        },
+        {
+            'loss': l,
+        }
+    )
 
+    latentVectors = []
     for i in range(len(testSet)):
         original = testSet[i].view(-1, 1, height, width)
         data = original.to(device)
          # forward
-        output = model(data)
+        output, latent = model(data)
         loss = criterion(output, data)
+        latentVectors.append(latent[0])
 
         image = torch.cat([original, output.cpu().data], dim=0)
-        save_image(image, path.format(epoch, 'test', loss.data), normalize=True)
+        img = vutils.make_grid(image, normalize=True)
+        writer.add_image('test', img, loss.data)
+        writer.add_scalar('Loss/test', loss.data, i)
         logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, trainSetSize, loss.data))
+
+    print('latent size: {}'.format(len(latentVectors)))
+    file_name = '{}_{}.pickle'.format('la', timestr)
+
+    if not os.path.exists(config['latent_pickle']):
+        os.makedirs(config['latent_pickle'])
+    path = os.path.join(config['latent_pickle'], file_name)
+
+    try:
+        with open(path, 'wb') as fp:
+            pickle.dump(latentVectors, fp)
+    except Exception:
+        msg = 'Latent: {} serialization (dump) is failed!'.format('la')
+        logger.critical(msg, exc_info=True)
+        print(msg)
+    logger.info('Dumped: {}'.format(file_name))
+
+    writer.close()
 
     Path(config["pytorch_model_folder"]).mkdir(parents=True, exist_ok=True)
     modelPath = os.path.join(config["pytorch_model_folder"], 'cae_la_{}.pt').format(timestr)
     torch.save(model.state_dict(), modelPath)
-
