@@ -24,21 +24,29 @@ logger = get_logger(__name__)
 
 if __name__ == '__main__':
     config = getConfiguration("config_laconvae.json")
-    patients = unSerializePatients(config)
+    patients = unSerializePatients(config['pickle_folder'], config['failed_pickle_folder'])
 
-    # TODO put this part to preprocessor
-    cropSize = 130
-    patientsImages = []
-    for p in patients:
+    trainSetSize = int(np.round((len(patients) * config['train_rate'])))
+    trainPatients = patients[0: trainSetSize]
+    trainSet = []
+    testSet = []
+    for i, p in enumerate(patients):
         for imgType in config['image_types']:
             for img in p.ImageTypes[imgType].Views:
+                # TODO put this part to preprocessor
+                # -------------------------------------------------
+                cropSize = 130
                 h, w = img.PixelArray.shape
                 y = int((h - cropSize) / 2)
                 x = int((w - cropSize) / 2)
                 crop_img = img.PixelArray[y:y + cropSize, x:x + cropSize]
-                patientsImages.append(crop_img)
-
-    random.shuffle(patientsImages)
+                # -------------------------------------------------
+                if i < trainSetSize:
+                    trainSet.append(crop_img)
+                else:
+                    testSet.append(crop_img)
+    trainSet = torch.Tensor(random(trainSet))
+    testSet = torch.Tensor(testSet)
 
     if config['cuda_seed'] >= 0:
         device = 'cuda:{}'.format(config['cuda_seed'])
@@ -51,14 +59,10 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
 
-    images = torch.Tensor(patientsImages)
-    height = patientsImages[0].shape[0]
-    width = patientsImages[0].shape[1]
-    trainSetSize = int(np.round((len(patientsImages) * 0.75) / config['batch_size'])) * config['batch_size']
-    trainSet = images[0: trainSetSize]
-    testSet = images[trainSetSize + 1:]
+    height = trainSet[0].shape[0]
+    width = trainSet[0].shape[1]
 
-    msg = 'shape: {}, trainSet: {}, testSet: {}'.format(patientsImages[0].shape, len(trainSet), len(testSet))
+    msg = 'shape: {}, trainSet: {}, testSet: {}'.format(trainSet[0].shape, len(trainSet), len(testSet))
     print(msg)
     logger.info(msg)
 
@@ -117,36 +121,18 @@ if __name__ == '__main__':
         }
     )
 
-    latentVectors = []
     for i in range(len(testSet)):
         original = testSet[i].view(-1, 1, height, width)
         data = original.to(device)
         # forward
         output, latent = model(data)
         loss = criterion(output, data)
-        latentVectors.append(latent[0])
 
         image = torch.cat([original, output.cpu().data], dim=0)
         img = vutils.make_grid(image, normalize=True)
         writer.add_image('test', img, loss.data)
         writer.add_scalar('Loss/test', loss.data, i)
         logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, trainSetSize, loss.data))
-
-    print('latent size: {}'.format(len(latentVectors)))
-    file_name = '{}_{}.pickle'.format('la', timestr)
-
-    if not os.path.exists(config['latent_pickle']):
-        os.makedirs(config['latent_pickle'])
-    path = os.path.join(config['latent_pickle'], file_name)
-
-    try:
-        with open(path, 'wb') as fp:
-            pickle.dump(latentVectors, fp)
-    except Exception:
-        msg = 'Latent: {} serialization (dump) is failed!'.format('la')
-        logger.critical(msg, exc_info=True)
-        print(msg)
-    logger.info('Dumped: {}'.format(file_name))
 
     writer.close()
 

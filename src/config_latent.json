@@ -1,0 +1,9 @@
+{
+  "pytorch_model_file": "cae_la_20200504-133444.pt",
+  "pytorch_model_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pytorch_model",
+  "pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pickle",
+  "image_type": "la",
+  "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed",
+  "latent_pickle": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/latent",
+  "cuda_seed": -1
+}

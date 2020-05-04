@@ -29,7 +29,7 @@ def getConfiguration(jsonFileLocation="config.json"):
 
     return config
 
-def unSerializePatients(config):
+def unSerializePatients(folder, failedFolder):
     print('Reload from Pickle')
     start = timer()
     reloadedPatients = []
@@ -38,11 +38,10 @@ def unSerializePatients(config):
     pathologyNames = filter(lambda p: p[0] != '_', dir(patient_enums.Pathology))
     typeDict = dict.fromkeys(list(pathologyNames), 0)
 
-    fileList = os.listdir(config["pickle_folder"])
-    index = 0
+    fileList = os.listdir(folder)
     for index, fileName in enumerate(fileList):
         progress_bar(index + 1, len(fileList), 20)
-        fullPath = os.path.join(config["pickle_folder"], fileName)
+        fullPath = os.path.join(folder, fileName)
         logger.debug('Pickle load: {}'.format(fullPath))
 
         try:
@@ -53,12 +52,12 @@ def unSerializePatients(config):
                 reloadedPatients.append(patient)
             else:
                 logger.warning('Empty: {}'.format(fullPath))
-                destPath = os.path.join(config['failed_pickle_folder'], fileName)
+                destPath = os.path.join(failedFolder, fileName)
                 os.replace(fullPath, destPath)
                 numOfEmpty = numOfEmpty + 1
         except Exception:
             logger.error('Broken: {}'.format(fullPath), exc_info=True)
-            destPath = os.path.join(config['failed_pickle_folder'], fileName)
+            destPath = os.path.join(failedFolder, fileName)
             os.replace(fullPath, destPath)
             numOfError = numOfError + 1
 
