@@ -1,0 +1,14 @@
+{
+  "pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pickle",
+  "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed",
+  "image_types": ["la"],
+  "pytorch_model_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pytorch_model",
+  "latent_pickle": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/latent",
+  "tensoardboardx_folder":  "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/runs",
+  "cuda_seed": -1,
+  "batch_size": 4,
+  "epoch": 30,
+  "goal_loss": 10.0,
+  "learning_rate": 1e-3,
+  "weight_decay": 1e-5
+}

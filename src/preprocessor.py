@@ -5,6 +5,7 @@ import os
 import json
 from utils import get_logger, progress_bar
 import pydicom
+from pydicom.pixel_data_handlers.util import apply_modality_lut
 
 # Attributes processing
 import numpy as np
@@ -21,34 +22,16 @@ class Preprocessor:
     '''
 
     @staticmethod
-    def getConfiguration(jsonFileLocation = "config.json"):
-        try:
-            with open(jsonFileLocation, 'r') as fp:
-                config = json.load(fp)
-        except FileNotFoundError:
-            msg = jsonFileLocation + ' is not found!'
-            logger.critical(msg)
-            print(msg)
-            exit(1)
-        except ValueError:
-            msg = jsonFileLocation + ' JSON format is not correct!'
-            logger.critical(msg)
-            print(msg)
-            exit(1) 
-        
-        return config
-
-    @staticmethod
     def preprocessPatientsByConfig(config):
         stat = []
         numOfCorrect = 0
         numOfBroken = 0
         dirs = os.listdir(config['image_folder'])
 
-        for index, patientId in enumerate(dirs): # folder names = patientIds
+        for index, patientId in enumerate(dirs):  # folder names = patientIds
             logger.info('Start: ' + patientId)
-            progress_bar(index+1, len(dirs), 20)
-            
+            progress_bar(index + 1, len(dirs), 20)
+
             folderPath = os.path.join(config['image_folder'], patientId)
             if not os.path.isdir(folderPath):
                 logger.warning("Unwaited file: {}".format(folderPath))
@@ -65,10 +48,10 @@ class Preprocessor:
                 stat.append(msg)
                 logger.warning(msg)
                 numOfBroken = numOfBroken + 1
-            
+
             logger.info('Finished: ' + patientId)
         return stat, numOfCorrect, numOfBroken
-    
+
     @staticmethod
     def preprocessPatient(config, patientId):
         patientFolder = os.path.join(config['image_folder'], patientId)
@@ -81,13 +64,13 @@ class Preprocessor:
             sepAttr = config['image_types'][imgType]["separator_attr"]
             goalAmount = config['image_types'][imgType]["goal_amount"]
             patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr, goalAmount)
-            
+
             if len(patient.ImageTypes[imgType].Views) == 0:
                 msg = '{} doesnt contain correct {} images'.format(
                     patientId, imgType.upper())
                 logger.error(msg)
         return patient
-    
+
     @staticmethod
     def _getStatFromPatient(patient):
         imgStat = []
@@ -134,7 +117,7 @@ class Preprocessor:
             logger.critical(exMsg)
             print(exMsg)
             exit(1)
-    
+
     @staticmethod
     def _getImages(imageFolder, separatorAttr, goalAmount):
         files = os.listdir(imageFolder)
@@ -142,7 +125,7 @@ class Preprocessor:
         if len(dcmFiles) == 0:
             logger.error(imageFolder + ' is empty!')
             return ImageCollection()
-                
+
         iCol = ImageCollection()
         separatorAttrVals = []
 
@@ -164,20 +147,20 @@ class Preprocessor:
                         # I found some images, what is not correct with MicroDicom,
                         # but processable with pydicom
                         # However error happens also with bad separator attr
-                        msg = 'Separator ("{}") attr missing from img: {}'\
+                        msg = 'Separator ("{}") attr missing from img: {}' \
                             .format(separatorAttr, filePath)
                         logger.error(msg)
                         raise ex
             except Exception:
                 logger.error('Broken: {}'.format(filePath), exc_info=True)
-            
+
             iCol.Views = Preprocessor._filterCloseSameImages(iCol.Views, separatorAttr, goalAmount)
         return iCol
 
     @staticmethod
     def _createImage(dcmFile):
         img = Image()
-        img.PixelArray = dcmFile.pixel_array
+        img.PixelArray = Preprocessor._convertDicomFloatToUint8(dcmFile)
         img.Attributes = Preprocessor._getAttributes(dcmFile)
         return img
 
@@ -195,10 +178,10 @@ class Preprocessor:
         # everyelse will be droped
         enabledTypes = (int, str, Decimal, np.float)
         convertableTypes = {
-            pydicom.valuerep.DSfloat:       np.float,
-            pydicom.valuerep.DSdecimal:     Decimal,
-            pydicom.valuerep.IS:            np.int,
-            pydicom.multival.MultiValue:    list
+            pydicom.valuerep.DSfloat: np.float,
+            pydicom.valuerep.DSdecimal: Decimal,
+            pydicom.valuerep.IS: np.int,
+            pydicom.multival.MultiValue: list
         }
 
         for attr in fileAttrs:
@@ -214,7 +197,7 @@ class Preprocessor:
             elif isinstance(dcmAttr, enabledTypes):
                 attributes[attr] = dcmAttr
         return attributes
-    
+
     @staticmethod
     def _convertDicomType(convertableTypes, dcmAttr):
         if isinstance(dcmAttr, tuple(convertableTypes.keys())):
@@ -223,17 +206,26 @@ class Preprocessor:
             if isinstance(dcmAttr, list):
                 return [Preprocessor._convertDicomType(convertableTypes, x) for x in dcmAttr]
         return dcmAttr
-    
+
+    @staticmethod
+    def _convertDicomFloatToUint8(dcm):
+        # http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.11.html#sect_C.11.1.1.2
+        image = apply_modality_lut(dcm.pixel_array, dcm)
+        image = (np.maximum(image, 0) / image.max()) * 255.0
+        image = image.astype(np.uint8)
+
+        return image
+
     @staticmethod
     def _filterCloseSameImages(views, sepAttr, goalAmount):
         lenViews = len(views)
         dropableAmount = lenViews - goalAmount
         if goalAmount >= lenViews or dropableAmount <= 0:
             return views
-        
+
         testAttr = views[0].Attributes[sepAttr]
         if not isinstance(testAttr, list) \
-            or not isinstance(testAttr[0], (int, float, np.float, Decimal)):
+                or not isinstance(testAttr[0], (int, float, np.float, Decimal)):
             return views
 
         ipValues = {}
@@ -256,5 +248,5 @@ class Preprocessor:
 
         for i in sorted(drop, reverse=True):
             del views[i]
-        
+
         return views

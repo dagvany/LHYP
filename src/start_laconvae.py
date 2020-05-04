@@ -1,88 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import sys
+
+import time
+import random
+import pickle
+import numpy as np
+from pathlib import Path
+
+from laconvae import LaConvAE
+
+from utils import get_logger, progress_bar
+from proc_utils import getConfiguration, unSerializePatients
+
 import torch
 from torch import nn
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
-import os
-import sys
-import pickle
-from pathlib import Path
-import time
-import numpy as np
-
-from utils import get_logger
-
 logger = get_logger(__name__)
 
-class ConvAE(nn.Module):
-    def __init__(self):
-        super(ConvAE, self).__init__()
+if __name__ == '__main__':
+    config = getConfiguration("config_laconvae.json")
+    patients = unSerializePatients(config)
 
-        self.encoderConv = nn.Sequential(
-            nn.BatchNorm2d(1),
-            nn.Conv2d(1, 8, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
+    # TODO put this part to preprocessor
+    cropSize = 130
+    patientsImages = []
+    for p in patients:
+        for imgType in config['image_types']:
+            for img in p.ImageTypes[imgType].Views:
+                h, w = img.PixelArray.shape
+                y = int((h - cropSize) / 2)
+                x = int((w - cropSize) / 2)
+                crop_img = img.PixelArray[y:y + cropSize, x:x + cropSize]
+                patientsImages.append(crop_img)
 
-            nn.BatchNorm2d(8),
-            nn.Conv2d(8, 16, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
+    random.shuffle(patientsImages)
 
-            nn.BatchNorm2d(16),
-            nn.Conv2d(16, 32, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
-
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 16, kernel_size=3, stride=2, padding=0),
-            nn.SELU(),
-
-            nn.BatchNorm2d(16),
-            nn.Conv2d(16, 8, kernel_size=3, stride=2, padding=0),
-            nn.SELU(),
-
-            # Instead of MaxPool
-            nn.BatchNorm2d(8),
-            nn.Conv2d(8, 1, kernel_size=1, stride=1, padding=0),
-            nn.SELU(),
-        )
-
-        self.decoderDeConv = nn.Sequential(
-            nn.ConvTranspose2d(1, 8, kernel_size=1, stride=1, padding=0),
-            nn.SELU(),
-
-            nn.ConvTranspose2d(8, 16, kernel_size=3, stride=2, padding=0),
-            nn.SELU(),
-            nn.ConvTranspose2d(16, 32, kernel_size=3, stride=2, padding=0),
-            nn.SELU(),
-            nn.ConvTranspose2d(32, 16, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
-            nn.ConvTranspose2d(16, 8, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
-            nn.ConvTranspose2d(8, 1, kernel_size=2, stride=1, padding=0),
-            nn.SELU(),
-        )
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                if m.bias is not None:
-                    #nn.init.uniform(m.bias)
-                    nn.init.xavier_uniform(m.weight)
-
-            if isinstance(m, nn.ConvTranspose2d):
-                if m.bias is not None:
-                    #nn.init.uniform(m.bias)
-                    nn.init.xavier_uniform(m.weight)
-
-
-    def forward(self, bachedInputs):
-        latent = self.encoderConv(bachedInputs)
-        decoded = self.decoderDeConv(latent)
-        return decoded, latent
-
-
-def run(patientsImages, config):
     if config['cuda_seed'] >= 0:
         device = 'cuda:{}'.format(config['cuda_seed'])
     else:
@@ -90,16 +47,16 @@ def run(patientsImages, config):
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     writer = SummaryWriter(os.path.join(config["tensoardboardx_folder"], timestr))
-    model = ConvAE().to(device)
+    model = LaConvAE().to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
 
     images = torch.Tensor(patientsImages)
     height = patientsImages[0].shape[0]
     width = patientsImages[0].shape[1]
-    trainSetSize = int(np.round((len(patientsImages)*0.75)/config['batch_size'])) * config['batch_size']
+    trainSetSize = int(np.round((len(patientsImages) * 0.75) / config['batch_size'])) * config['batch_size']
     trainSet = images[0: trainSetSize]
-    testSet = images[trainSetSize+1: ]
+    testSet = images[trainSetSize + 1:]
 
     msg = 'shape: {}, trainSet: {}, testSet: {}'.format(patientsImages[0].shape, len(trainSet), len(testSet))
     print(msg)
@@ -132,7 +89,7 @@ def run(patientsImages, config):
             loss.backward()
             optimizer.step()
 
-            l = loss.data # while
+            l = loss.data  # while
 
             writer.add_scalar('Loss/train', l, epoch)
 
@@ -164,7 +121,7 @@ def run(patientsImages, config):
     for i in range(len(testSet)):
         original = testSet[i].view(-1, 1, height, width)
         data = original.to(device)
-         # forward
+        # forward
         output, latent = model(data)
         loss = criterion(output, data)
         latentVectors.append(latent[0])

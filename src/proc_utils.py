@@ -2,34 +2,33 @@
 # -*- coding: utf-8 -*-
 
 import os
-from utils import get_logger, progress_bar
-from preprocessor import Preprocessor
-
-from models import Patient
-
-# Time measure
+import json
 from timeit import default_timer as timer
 from datetime import timedelta
 
-# Unserialize Stat
-import json
+from models import Patient
 from models import patient_enums, ImageCollection, Image
+from utils import get_logger, progress_bar
 
 logger = get_logger(__name__)
 
-def preprocessPatiens(config):
-    print('Preprocessing Patients Images')
-    start = timer()
+
+def getConfiguration(jsonFileLocation="config.json"):
     try:
-        patientStats = Preprocessor.preprocessPatientsByConfig(config)
-    except Exception as ex:
-        logger.critical(ex, exc_info=True)
-        print(ex)
+        with open(jsonFileLocation, 'r') as fp:
+            config = json.load(fp)
+    except FileNotFoundError:
+        msg = jsonFileLocation + ' is not found!'
+        logger.critical(msg)
+        print(msg)
         exit(1)
-    end = timer()
-    print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
-    
-    return patientStats
+    except ValueError:
+        msg = jsonFileLocation + ' JSON format is not correct!'
+        logger.critical(msg)
+        print(msg)
+        exit(1)
+
+    return config
 
 def unSerializePatients(config):
     print('Reload from Pickle')
@@ -39,14 +38,14 @@ def unSerializePatients(config):
     numOfError = 0
     pathologyNames = filter(lambda p: p[0] != '_', dir(patient_enums.Pathology))
     typeDict = dict.fromkeys(list(pathologyNames), 0)
-    
+
     fileList = os.listdir(config["pickle_folder"])
     index = 0
     for index, fileName in enumerate(fileList):
-        progress_bar(index+1, len(fileList), 20)
+        progress_bar(index + 1, len(fileList), 20)
         fullPath = os.path.join(config["pickle_folder"], fileName)
         logger.debug('Pickle load: {}'.format(fullPath))
-        
+
         try:
             patient = Patient.unSerialize(fullPath)
             if patient.hasAnyImage():
@@ -65,29 +64,15 @@ def unSerializePatients(config):
             numOfError = numOfError + 1
 
     end = timer()
-    
-    print('Measured time: {}'.format(str(timedelta(seconds=end-start))))
-    print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(index+1, numOfError, numOfEmpty))
+
+    print('Measured time: {}'.format(str(timedelta(seconds=end - start))))
+    print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(index + 1, numOfError, numOfEmpty))
     try:
         import psutil
-        patientSize = psutil.Process(os.getpid()).memory_info().rss /1024 /1024
+        patientSize = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
         print("Memory size of patients = {} Mbytes".format(patientSize))
     except:
         pass
     print(json.dumps(typeDict, indent=4, sort_keys=True))
 
     return reloadedPatients
-
-if __name__ == '__main__':
-    config = Preprocessor.getConfiguration("config.json")
-
-    # Preprocessing
-    if config["patients_preprocessing"]:
-        patientStats = preprocessPatiens(config)
-        tldrStat = 'Total: {:5d}, Correct: {:5d}, Broken: {:5d}'.format(
-            patientStats[1]+patientStats[2], patientStats[1], patientStats[2])
-        print(tldrStat)
-        logger.info(tldrStat)
-        logger.info('\n'.join(patientStats[0]))
-    else:
-        patients = unSerializePatients(config)
