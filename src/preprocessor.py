@@ -44,8 +44,9 @@ class Preprocessor:
                 stat.append(Preprocessor._getStatFromPatient(patient))
                 numOfCorrect = numOfCorrect + 1
             else:
-                msg = '{} hasnt contains any images!'.format(patient.ID)
-                stat.append(msg)
+                txt = 'hasnt contains any images!'
+                msg = '{} {}'.format(patient.ID, txt)
+                stat.append([patient.ID, str(Pathology.UNDEFINED), txt])
                 logger.warning(msg)
                 numOfBroken = numOfBroken + 1
 
@@ -80,7 +81,8 @@ class Preprocessor:
             stat = '{}: {:4d} commonAttr: {:4d}'.format(
                 imgType, numOfViews, numOfCommonAttrs)
             imgStat.append(stat)
-        return '\t'.join([patient.ID, str(patient.Pathology), str(imgStat)])
+        data = [patient.ID, str(patient.Pathology), str(imgStat)]
+        return data
 
     @staticmethod
     def _getPathology(folder):

@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import math
+
 from utils import get_logger, progress_bar
 from preprocessor import Preprocessor
+from proc_utils import getConfiguration
+
+from models import Pathology
 
 # Time measure
 from timeit import default_timer as timer
@@ -25,7 +31,7 @@ def preprocessPatiens(config):
     return patientStats
 
 if __name__ == '__main__':
-    config = Preprocessor.getConfiguration("config_preprocess.json")
+    config = getConfiguration("config_preprocess.json")
 
     patientStats = preprocessPatiens(config)
     tldrStat = 'Total: {:5d}, Correct: {:5d}, Broken: {:5d}'.format(
@@ -35,4 +41,35 @@ if __name__ == '__main__':
     )
     print(tldrStat)
     logger.info(tldrStat)
-    logger.info('\n'.join(patientStats[0]))
+    print(patientStats[0])
+    txt = ['\t'.join(line) for line in patientStats[0]]
+    logger.info('\n'.join(txt))
+
+    pStat = {}
+    for p in patientStats[0]:
+        pathology = Pathology[p[1].split('.')[1]]
+        if pathology in pStat:
+            pStat[pathology]['num'] += 1
+            pStat[pathology]['ids'].append(p[0])
+        else:
+            pStat[pathology] = {'num': 1, 'ids': [p[0]]}
+
+    validatePatientIds = []
+    for pathology in pStat:
+        if pathology is not Pathology.UNDEFINED:
+            data = pStat[pathology]
+            numOfValidate = math.ceil(data['num'] * config['validate_rate'])
+            validatePatientIds += data['ids'][0: numOfValidate]
+    print(validatePatientIds)
+
+    validateFolder = os.path.join(config['pickle_folder'], 'validate')
+    if not os.path.exists(validateFolder):
+        os.makedirs(validateFolder)
+
+    for pid in validatePatientIds:
+        src = os.path.join(config['pickle_folder'], '{}.pickle'.format(pid))
+        dst = os.path.join(validateFolder, '{}.pickle'.format(pid))
+        os.replace(src, dst)
+
+    logger.info('Preprocess is done.')
+

@@ -12,7 +12,6 @@ from utils import get_logger, progress_bar
 
 logger = get_logger(__name__)
 
-
 def getConfiguration(jsonFileLocation="config.json"):
     try:
         with open(jsonFileLocation, 'r') as fp:

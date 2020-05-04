@@ -13,5 +13,6 @@
         }
     },
     "pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pickle",
-    "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed"
+    "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed",
+    "validate_rate": 0.15
 }
