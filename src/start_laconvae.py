@@ -6,7 +6,7 @@ import sys
 
 import time
 import random
-import pickle
+
 import numpy as np
 from pathlib import Path
 
@@ -45,7 +45,8 @@ if __name__ == '__main__':
                     trainSet.append(crop_img)
                 else:
                     testSet.append(crop_img)
-    trainSet = torch.Tensor(random(trainSet))
+    random.shuffle(trainSet)
+    trainSet = torch.Tensor(trainSet)
     testSet = torch.Tensor(testSet)
 
     if config['cuda_seed'] >= 0:
