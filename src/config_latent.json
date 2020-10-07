@@ -1,6 +1,7 @@
 {
   "pytorch_model_file": "cae_la_20200504-153924.pt",
   "pytorch_model_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pytorch_model",
+
   "pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/!latent_test",
   "image_type": "la",
   "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed",
