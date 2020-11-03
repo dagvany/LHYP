@@ -1,33 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Serialization
 import os
 import pickle
 
 from utils import get_logger
-
 from .patient_enums import Pathology
-from .imageCollection import ImageCollection
 
 logger = get_logger(__name__)
+
 
 class Patient:
     def __init__(self, patientId):
         self.ID = patientId
         self.Pathology = Pathology.UNDEFINED
+        self.Sex = None
+        self.Weight = None
+        self.Height = None
         self.ImageTypes = {}
 
     def hasAnyImage(self):
-        return any([len(self.ImageTypes[t].Views) > 0 for t in self.ImageTypes])
-    
-    def organizeImageAttributes(self):
-        for iType in self.ImageTypes:
-            self.ImageTypes[iType].organiseAttributes()
+        return any([len(self.ImageTypes[t]) > 0 for t in self.ImageTypes])
 
     def serialize(self, dest_folder):
         file_name = self.ID + '.pickle'
-        
+        dest_folder = os.path.join(dest_folder, self.Pathology.name)
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
         path = os.path.join(dest_folder, file_name)

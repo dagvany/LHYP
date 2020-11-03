@@ -3,17 +3,17 @@
 
 import os
 import json
-from utils import get_logger, progress_bar
-import pydicom
-from pydicom.pixel_data_handlers.util import apply_modality_lut
-
-# Attributes processing
 import numpy as np
 from decimal import Decimal
 
+import pydicom
+from pydicom.pixel_data_handlers.util import apply_modality_lut
+
+from utils import get_logger, progress_bar
 from models import Patient, Pathology, Image, ImageCollection
 
 logger = get_logger(__name__)
+
 
 class Preprocessor:
     '''
@@ -34,7 +34,7 @@ class Preprocessor:
 
             folderPath = os.path.join(config['image_folder'], patientId)
             if not os.path.isdir(folderPath):
-                logger.warning("Unwaited file: {}".format(folderPath))
+                logger.warning("Unwanted file: {}".format(folderPath))
                 continue
 
             patient = Preprocessor.preprocessPatient(config, patientId)
@@ -44,7 +44,7 @@ class Preprocessor:
                 stat.append(Preprocessor._getStatFromPatient(patient))
                 numOfCorrect = numOfCorrect + 1
             else:
-                txt = 'hasnt contains any images!'
+                txt = "hasn't contains any images!"
                 msg = '{} {}'.format(patient.ID, txt)
                 stat.append([patient.ID, str(Pathology.UNDEFINED), txt])
                 logger.warning(msg)
@@ -64,10 +64,11 @@ class Preprocessor:
             path = os.path.join(patientFolder, iTypeFolder)
             sepAttr = config['image_types'][imgType]["separator_attr"]
             goalAmount = config['image_types'][imgType]["goal_amount"]
-            patient.ImageTypes[imgType] = Preprocessor._getImages(path, sepAttr, goalAmount)
+            patient.ImageTypes[imgType] = Preprocessor._getImages(
+                    path, sepAttr, goalAmount)
 
             if len(patient.ImageTypes[imgType].Views) == 0:
-                msg = '{} doesnt contain correct {} images'.format(
+                msg = "{} doesn't contain correct {} images".format(
                     patientId, imgType.upper())
                 logger.error(msg)
         return patient
@@ -77,7 +78,7 @@ class Preprocessor:
         imgStat = []
         for imgType in patient.ImageTypes:
             numOfViews = len(patient.ImageTypes[imgType].Views)
-            numOfCommonAttrs = len(patient.ImageTypes[imgType].CommonAttibutes)
+            numOfCommonAttrs = len(patient.ImageTypes[imgType].CommonAttributes)
             stat = '{}: {:4d} commonAttr: {:4d}'.format(
                 imgType, numOfViews, numOfCommonAttrs)
             imgStat.append(stat)
@@ -129,7 +130,7 @@ class Preprocessor:
             return ImageCollection()
 
         iCol = ImageCollection()
-        separatorAttrVals = []
+        separatorAttrValues = []
 
         for file in dcmFiles:
             filePath = os.path.join(imageFolder, file)
@@ -139,15 +140,15 @@ class Preprocessor:
                     try:
                         if separatorAttr:
                             attrVal = getattr(tempDcm, separatorAttr)
-                            if attrVal not in separatorAttrVals:
-                                separatorAttrVals.append(attrVal)
+                            if attrVal not in separatorAttrValues:
+                                separatorAttrValues.append(attrVal)
                             else:
                                 continue
                         img = Preprocessor._createImage(tempDcm)
                         iCol.Views.append(img)
                     except AttributeError as ex:
-                        # I found some images, what is not correct with MicroDicom,
-                        # but processable with pydicom
+                        # I found some images, what is not correct with
+                        # MicroDicom, but processable with pydicom
                         # However error happens also with bad separator attr
                         msg = 'Separator ("{}") attr missing from img: {}' \
                             .format(separatorAttr, filePath)
@@ -156,7 +157,8 @@ class Preprocessor:
             except Exception:
                 logger.error('Broken: {}'.format(filePath), exc_info=True)
 
-            iCol.Views = Preprocessor._filterCloseSameImages(iCol.Views, separatorAttr, goalAmount)
+            iCol.Views = Preprocessor._filterCloseSameImages(
+                    iCol.Views, separatorAttr, goalAmount)
         return iCol
 
     @staticmethod

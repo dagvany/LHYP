@@ -7,10 +7,11 @@ from timeit import default_timer as timer
 from datetime import timedelta
 
 from models import Patient
-from models import patient_enums, ImageCollection, Image
+from models import patient_enums
 from utils import get_logger, progress_bar
 
 logger = get_logger(__name__)
+
 
 def getConfiguration(jsonFileLocation="config.json"):
     try:
@@ -28,6 +29,7 @@ def getConfiguration(jsonFileLocation="config.json"):
         exit(1)
 
     return config
+
 
 def unSerializePatients(folder, failedFolder):
     print('Reload from Pickle')
@@ -64,10 +66,11 @@ def unSerializePatients(folder, failedFolder):
     end = timer()
 
     print('Measured time: {}'.format(str(timedelta(seconds=end - start))))
-    print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(index + 1, numOfError, numOfEmpty))
+    print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(
+        index + 1, numOfError, numOfEmpty))
     try:
         import psutil
-        patientSize = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+        patientSize = psutil.Process(os.getpid()).memory_info().rss / 1024/1024
         print("Memory size of patients = {} Mbytes".format(patientSize))
     except:
         pass

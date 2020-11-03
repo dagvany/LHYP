@@ -3,29 +3,32 @@ import time
 import functools
 import sys
 
+
 def get_logger(name):
     """
     Returns an already configured logger for a specific module.
     (This should be used instead of stdout.)
-    :param name: the name of the modeule where the logger is created
+    :param name: the name of the module where the logger is created
     :return: a custom configured logger object
     """
-    setLevel = logging.INFO
+    setLevel = logging.DEBUG
     
     logger = logging.getLogger(name)
     logger.setLevel(setLevel)
     
     handler = logging.FileHandler("hypertrophy.log", mode='a')
-    formatter = logging.Formatter('%(levelname)s - %(asctime)s - %(name)s -- %(msg)s')
+    formatter = logging.Formatter(
+            '%(levelname)s - %(asctime)s - %(name)s -- %(msg)s')
     handler.setFormatter(formatter)
     handler.setLevel(setLevel)
 
     logger.addHandler(handler)
     return logger
 
+
 def process_time(logger):
     """
-    Decorator for measuring the ellapsed time for a process.
+    Decorator for measuring the elapsed time for a process.
     The result is logged.
     """
     def decorator_wrapper(func):
@@ -35,7 +38,8 @@ def process_time(logger):
             start_time = time.perf_counter()
             value = func(*args, **kwargs)
             end_time = time.perf_counter()
-            logger.info("Process {0} FINISHED. Ellapsed time: {1:.4f}".format(func.__name__, end_time - start_time))
+            logger.info("Process {0} FINISHED. Elapsed time: {1:.4f}".format(
+                        func.__name__, end_time - start_time))
             return value
         return wrapper_process_time
     return decorator_wrapper
@@ -44,7 +48,7 @@ def process_time(logger):
 def progress_bar(current, total, bins):
     freq = total / bins
     bar = "#" * int(current / freq) + " " * (bins - int(current / freq))
-    print("\rLoading [{}] {} %".format(bar, int(current/total * 100.0)), end="", flush=True)
-    #print("\rLoading [{}] {} %".format(bar, int(current / total * 100.0)), flush=True)
+    print("\rLoading [{}] {} %".format(
+        bar, int(current/total * 100.0)), end="", flush=True)
     if current == total:
-        print("\nLoading finsihed\n")
+        print("\nLoading finished\n")

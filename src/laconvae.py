@@ -3,6 +3,7 @@
 
 from torch import nn
 
+
 class LaConvAE(nn.Module):
     def __init__(self):
         super(LaConvAE, self).__init__()
