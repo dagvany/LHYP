@@ -31,49 +31,60 @@ def getConfiguration(jsonFileLocation="config.json"):
     return config
 
 
+def _loadPatients(folder, failedFolder, typeDict):
+    reloadedPatients = []
+    numOfEmpty = 0
+    numOfError = 0
+    progressTotal = sum(len(f[2]) for f in os.walk(folder))
+    progressCounter = 0
+    for pathology in os.listdir(folder):
+        for fileName in os.listdir(os.path.join(folder, pathology)):
+            progressCounter += 1
+            progress_bar(progressCounter, progressTotal, 20)
+            fullPath = os.path.join(folder, pathology, fileName)
+            logger.debug('Pickle load: {}'.format(fullPath))
+            try:
+                patient = Patient.unSerialize(fullPath)
+                if patient.hasAnyImage():
+                    pathName = patient.Pathology.name
+                    typeDict[pathName] = typeDict[pathName] + 1
+                    reloadedPatients.append(patient)
+                else:
+                    logger.warning('Empty: {}'.format(fullPath))
+                    destPath = os.path.join(failedFolder, fileName)
+                    os.replace(fullPath, destPath)
+                    numOfEmpty = numOfEmpty + 1
+            except Exception:
+                logger.error('Broken: {}'.format(fullPath), exc_info=True)
+                destPath = os.path.join(failedFolder, fileName)
+                os.replace(fullPath, destPath)
+                numOfError = numOfError + 1
+    return reloadedPatients, numOfEmpty, numOfError
+
+
 def unSerializePatients(folder, failedFolder):
     print('Reload from Pickle')
     start = timer()
-    reloadedPatients = []
+    reloadedPatients = {}
     numOfEmpty = 0
     numOfError = 0
     pathologyNames = filter(lambda p: p[0] != '_', dir(patient_enums.Pathology))
     typeDict = dict.fromkeys(list(pathologyNames), 0)
 
-    fileList = os.listdir(folder)
-    for index, fileName in enumerate(fileList):
-        progress_bar(index + 1, len(fileList), 20)
-        fullPath = os.path.join(folder, fileName)
-        logger.debug('Pickle load: {}'.format(fullPath))
-
-        try:
-            patient = Patient.unSerialize(fullPath)
-            if patient.hasAnyImage():
-                pathName = patient.Pathology.name
-                typeDict[pathName] = typeDict[pathName] + 1
-                reloadedPatients.append(patient)
-            else:
-                logger.warning('Empty: {}'.format(fullPath))
-                destPath = os.path.join(failedFolder, fileName)
-                os.replace(fullPath, destPath)
-                numOfEmpty = numOfEmpty + 1
-        except Exception:
-            logger.error('Broken: {}'.format(fullPath), exc_info=True)
-            destPath = os.path.join(failedFolder, fileName)
-            os.replace(fullPath, destPath)
-            numOfError = numOfError + 1
-
+    for category in ['train', 'validate']:
+        trainPath = os.path.join(folder, category)
+        [patients, nEmpty, nError] = _loadPatients(
+            trainPath, failedFolder, typeDict)
+        reloadedPatients[category] = patients
+        numOfEmpty += nEmpty
+        numOfError += nError
     end = timer()
 
-    print('Measured time: {}'.format(str(timedelta(seconds=end - start))))
+    numOfTotal = sum([len(reloadedPatients[i]) for i in reloadedPatients])
+    numOfTotal = numOfTotal + numOfError + numOfEmpty
+    print('\nMeasured time: {}'.format(str(timedelta(seconds=end - start))))
     print('Total: {:5d}, Failed: {:5d}, Empty: {:5d}'.format(
-        index + 1, numOfError, numOfEmpty))
-    try:
-        import psutil
-        patientSize = psutil.Process(os.getpid()).memory_info().rss / 1024/1024
-        print("Memory size of patients = {} Mbytes".format(patientSize))
-    except:
-        pass
+        numOfTotal, numOfError, numOfEmpty))
     print(json.dumps(typeDict, indent=4, sort_keys=True))
 
     return reloadedPatients

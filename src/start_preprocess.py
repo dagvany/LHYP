@@ -147,6 +147,14 @@ def convertDicomType(dcmAttr):
     return dcmAttr
 
 
+def convertDicomFloatToUint8(dcm):
+    # http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.11.html#sect_C.11.1.1.2
+    image = apply_modality_lut(dcm.pixel_array, dcm)
+    image = (np.maximum(image, 0) / image.max()) * 255.0
+    image = image.astype(np.uint8)
+    return image
+
+
 def getImages(imageFolder, separatorAttr, goalAmount):
     files = os.listdir(imageFolder)
     dcmFiles = list(filter(lambda x: x.lower().endswith('.dcm'), files))
@@ -170,7 +178,7 @@ def getImages(imageFolder, separatorAttr, goalAmount):
                                         for x in allImages])
                         if not isContain and tempDcm.PixelData:
                             allImages.append({
-                                'img': tempDcm.PixelData,
+                                'img': convertDicomFloatToUint8(tempDcm),
                                 'sepVal': attrVal
                             })
                         else:
