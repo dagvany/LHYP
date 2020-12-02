@@ -1,0 +1,8 @@
+{
+  "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
+  "pickle_folder": "TestPatientData",
+  "failed_pickle_folder": "Data/failed",
+  "image_types": ["la"],
+  "angle": 15,
+  "pathologys": ["NORMAL", "AORTASTENOSIS", "AMY", "EMF", "FABRY"]
+}

@@ -112,3 +112,4 @@ venv.bak/
 *.dcm
 *.dicom
 mri_src/
+src/_sandbox.py

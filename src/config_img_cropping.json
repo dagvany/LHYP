@@ -1,0 +1,7 @@
+{
+  "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
+  "pickle_folder": "TestPatientData",
+  "failed_pickle_folder": "Data/failed",
+  "image_types": ["la"],
+  "crop_size": 125
+}
