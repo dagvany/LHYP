@@ -36,7 +36,7 @@ if __name__ == '__main__':
         if config['image_type'] in p.ImageTypes:
             trainSet.append(p.ImageTypes[config['image_type']])
     trainSet = torch.Tensor(list(chain(*trainSet)))
-    
+
     validateSet = []
     for p in patients['validate']:
         if config['image_type'] in p.ImageTypes:

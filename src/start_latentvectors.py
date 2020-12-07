@@ -15,7 +15,15 @@ logger = get_logger(__name__)
 
 if __name__ == '__main__':
     config = getConfiguration("config_latent.json")
-    path = os.path.join(config['pytorch_model_folder'], config['pytorch_model_file'])
+    trainedModelPath = os.path.join(
+        config["root"],
+        config['pytorch_model_folder'],
+        config['pytorch_model_file'])
+    picklePath = os.path.join(config['root'], config['pickle_folder'])
+    failedPath = os.path.join(config['root'], config['failed_pickle_folder'])
+    latentPath = os.path.join(config['root'], config['latent_pickle'])
+    imgType = config['image_type']
+    timestr = config['pytorch_model_file'].split('_')[-1].split('.')[0]
 
     if config['cuda_seed'] >= 0:
         device = 'cuda:{}'.format(config['cuda_seed'])
@@ -23,45 +31,31 @@ if __name__ == '__main__':
         device = 'cpu'
 
     model = LaConvAE()
-    model.load_state_dict(torch.load(path, map_location=torch.device(device)))
+    model.load_state_dict(torch.load(
+        trainedModelPath, map_location=torch.device(device)))
 
-    for dirName in os.listdir(config['pickle_folder']):
-        dirPath = os.path.join(config['pickle_folder'], dirName)
-        logger.info(dirName)
-        if os.path.isdir(dirPath):
-            patients = unSerializePatients(dirPath, config['failed_pickle_folder'])
-            imgType = config['image_type']
-
-            latentData = []
-            for p in patients:
-                for img in p.ImageTypes[imgType].Views:
-                    # TODO put this part to preprocessor
-                    # -------------------------------------------------
-                    cropSize = 130
-                    h, w = img.PixelArray.shape
-                    y = int((h - cropSize) / 2)
-                    x = int((w - cropSize) / 2)
-                    crop_img = img.PixelArray[y:y + cropSize, x:x + cropSize]
-                    # -------------------------------------------------
-                    original = torch.Tensor(crop_img)
-                    original = original.view(-1, 1, cropSize, cropSize)
-                    modelData = original.to(device)
-                    # forward
-                    output, latent = model(modelData)
-                    data = [p.Pathology, latent]
-                    latentData.append(data)
-
-            timestr = config['pytorch_model_file'].split('_')[-1].split('.')[0]
-            fileName = '{}_{}_{}.pickle'.format(imgType, dirName, timestr)
-            path = os.path.join(config['latent_pickle'], fileName)
-            try:
-                with open(path, 'wb') as fp:
-                    pickle.dump(latentData, fp)
-            except Exception:
-                msg = 'Latent: {} serialization (dump) is failed!'.format('la')
-                logger.critical(msg, exc_info=True)
-                print(msg)
-            logger.info('Dumped: {}'.format(fileName))
-
-        else:
-            logger.error("Unexpected file: {}".format(dirPath))
+    patients = unSerializePatients(picklePath, failedPath)
+    height, width = patients['train'][0].ImageTypes[imgType][0].shape
+    for setType in patients:
+        latentData = []
+        for p in patients[setType]:
+            if imgType not in p.ImageTypes:
+                continue
+            for img in p.ImageTypes[imgType]:
+                original = torch.Tensor(img)
+                original = original.view(-1, 1, height, width)
+                modelData = original.to(device)
+                output, latent = model(modelData)
+                labeledLatent = (p.Pathology, latent)
+                latentData.append(labeledLatent)
+   
+        fileName = '{}_{}_{}.pickle'.format(imgType, setType, timestr)
+        latentFilePath = os.path.join(latentPath, fileName)
+        try:
+            with open(latentFilePath, 'wb') as fp:
+                pickle.dump(latentData, fp)
+        except Exception:
+            msg = 'Latent: {} serialization dump is failed!'.format(imgType)
+            logger.critical(msg, exc_info=True)
+            print(msg)
+        logger.info('Dumped: {}'.format(fileName))

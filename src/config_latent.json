@@ -1,10 +1,10 @@
 {
-  "pytorch_model_file": "cae_la_20200504-153924.pt",
-  "pytorch_model_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pytorch_model",
-
-  "pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/!latent_test",
+  "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
+  "pytorch_model_folder": "Data/pytorch_model",
+  "pytorch_model_file": "cae_la_20201207-163905.pt",
+  "pickle_folder": "TestPatientData",
   "image_type": "la",
-  "failed_pickle_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/failed",
-  "latent_pickle": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/latent",
+  "failed_pickle_folder": "Data/failed",
+  "latent_pickle": "Data/latent",
   "cuda_seed": -1
 }
