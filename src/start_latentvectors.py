@@ -30,7 +30,7 @@ if __name__ == '__main__':
     else:
         device = 'cpu'
 
-    model = LaConvAE()
+    model = LaConvAE().to(device)
     model.load_state_dict(torch.load(
         trainedModelPath, map_location=torch.device(device)))
 
