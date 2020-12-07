@@ -5,10 +5,9 @@
   "pytorch_model_folder": "Data/pytorch_model",
   "tensoardboardx_folder":  "Data/runs",
   "image_type": "la",
-  "crop_size": 130,
   "cuda_seed": -1,
   "batch_size": 3,
-  "epoch": 30,
+  "epoch": 10,
   "goal_loss": 10.0,
   "learning_rate": 1e-3,
   "weight_decay": 1e-5

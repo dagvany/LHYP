@@ -139,5 +139,5 @@ if __name__ == '__main__':
 
     modelFolder = os.path.join(config["root"], config["pytorch_model_folder"])
     Path(modelFolder).mkdir(parents=True, exist_ok=True)
-    modelPath = os.path.join(modelPath, 'cae_la_{}.pt').format(timestr)
+    modelPath = os.path.join(modelFolder, 'cae_la_{}.pt').format(timestr)
     torch.save(model.state_dict(), modelPath)
