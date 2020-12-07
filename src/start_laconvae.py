@@ -6,6 +6,7 @@ import sys
 
 import time
 import random
+from itertools import chain
 
 import numpy as np
 from pathlib import Path
@@ -24,30 +25,23 @@ logger = get_logger(__name__)
 
 if __name__ == '__main__':
     config = getConfiguration("config_laconvae.json")
-    patients = unSerializePatients(config['pickle_folder'], config['failed_pickle_folder'])
+    picklePath = os.path.join(config['root'], config['pickle_folder'])
+    failedPath = os.path.join(config['root'], config['failed_pickle_folder'])
 
-    trainSetSize = int(np.round((len(patients) * config['train_rate'])))
-    trainPatients = patients[0: trainSetSize]
+    patients = unSerializePatients(picklePath, failedPath)
+
+    random.shuffle(patients['train'])
     trainSet = []
-    testSet = []
-    for i, p in enumerate(patients):
-        for imgType in config['image_types']:
-            for img in p.ImageTypes[imgType].Views:
-                # TODO put this part to preprocessor
-                # -------------------------------------------------
-                cropSize = 130
-                h, w = img.PixelArray.shape
-                y = int((h - cropSize) / 2)
-                x = int((w - cropSize) / 2)
-                crop_img = img.PixelArray[y:y + cropSize, x:x + cropSize]
-                # -------------------------------------------------
-                if i < trainSetSize:
-                    trainSet.append(crop_img)
-                else:
-                    testSet.append(crop_img)
-    random.shuffle(trainSet)
-    trainSet = torch.Tensor(trainSet)
-    testSet = torch.Tensor(testSet)
+    for p in patients['train']:
+        if config['image_type'] in p.ImageTypes:
+            trainSet.append(p.ImageTypes[config['image_type']])
+    trainSet = torch.Tensor(list(chain(*trainSet)))
+    
+    validateSet = []
+    for p in patients['validate']:
+        if config['image_type'] in p.ImageTypes:
+            validateSet.append(p.ImageTypes[config['image_type']])
+    validateSet = torch.Tensor(list(chain(*validateSet)))
 
     if config['cuda_seed'] >= 0:
         device = 'cuda:{}'.format(config['cuda_seed'])
@@ -55,15 +49,19 @@ if __name__ == '__main__':
         device = 'cpu'
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
-    writer = SummaryWriter(os.path.join(config["tensoardboardx_folder"], timestr))
+    writer = SummaryWriter(
+        os.path.join(config["root"], config["tensoardboardx_folder"], timestr))
     model = LaConvAE().to(device)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=config['learning_rate'],
+        weight_decay=config['weight_decay'])
 
-    height = trainSet[0].shape[0]
-    width = trainSet[0].shape[1]
+    height, width = trainSet[0].shape
 
-    msg = 'shape: {}, trainSet: {}, testSet: {}'.format(trainSet[0].shape, len(trainSet), len(testSet))
+    msg = 'shape: {}, trainSet: {}, validateSet: {}'.format(
+        (height, width), len(trainSet), len(validateSet))
     print(msg)
     logger.info(msg)
 
@@ -80,11 +78,12 @@ if __name__ == '__main__':
             break
         epoch += 1
 
-        if epoch % 25 == 0:
+        if epoch % 10 == 0:
             saveImage = True
 
         for i in range(0, len(trainSet), config["batch_size"]):
-            original = trainSet[i:i + config["batch_size"]].view(-1, 1, height, width)
+            original = trainSet[i:i + config["batch_size"]]
+            original = original.view(-1, 1, height, width)
             data = original.to(device)
             # forward
             output, latent = model(data)
@@ -122,8 +121,8 @@ if __name__ == '__main__':
         }
     )
 
-    for i in range(len(testSet)):
-        original = testSet[i].view(-1, 1, height, width)
+    for i in range(len(validateSet)):
+        original = validateSet[i].view(-1, 1, height, width)
         data = original.to(device)
         # forward
         output, latent = model(data)
@@ -133,10 +132,12 @@ if __name__ == '__main__':
         img = vutils.make_grid(image, normalize=True)
         writer.add_image('test', img, loss.data)
         writer.add_scalar('Loss/test', loss.data, i)
-        logger.info('test [{}/{}], loss:{:.4f}'.format(i + 1, trainSetSize, loss.data))
+        logger.info('test [{}/{}], loss:{:.4f}'.format(
+            i+1, len(validateSet), loss.data))
 
     writer.close()
 
-    Path(config["pytorch_model_folder"]).mkdir(parents=True, exist_ok=True)
-    modelPath = os.path.join(config["pytorch_model_folder"], 'cae_la_{}.pt').format(timestr)
+    modelFolder = os.path.join(config["root"], config["pytorch_model_folder"])
+    Path(modelFolder).mkdir(parents=True, exist_ok=True)
+    modelPath = os.path.join(modelPath, 'cae_la_{}.pt').format(timestr)
     torch.save(model.state_dict(), modelPath)
