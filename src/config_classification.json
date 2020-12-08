@@ -1,11 +1,13 @@
 {
-  "latent_pickle": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/latent",
-  "latent_train_file": "la_train_20200504-153924.pickle",
-  "latent_validate_file": "la_validate_20200504-153924.pickle",
-  "pytorch_model_folder": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/pytorch_model",
-  "tensoardboardx_folder":  "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Dipterv_MRI/test/runs",
+  "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
+  "latent_pickle": "Data/latent",
+  "latent_train_file": "la_train_20201207-163905.pickle",
+  "latent_validate_file": "la_validate_20201207-163905.pickle",
+  "pytorch_model_folder": "Data/pytorch_model",
+  "tensoardboardx_folder":  "Data/runs",
   "cuda_seed": -1,
-  "epoch_num": 1,
+  "epoch_num": 10,
   "batch_size":  8,
-  "learning_rate": 1e-3
+  "learning_rate": 1e-3,
+  "weight_decay": 1e-5
 }

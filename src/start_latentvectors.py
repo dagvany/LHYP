@@ -30,10 +30,11 @@ if __name__ == '__main__':
     else:
         device = 'cpu'
 
-    model = LaConvAE().to(device)
+    model = LaConvAE()
     model.load_state_dict(torch.load(
         trainedModelPath, map_location=torch.device(device)))
-
+    model.eval()
+    
     patients = unSerializePatients(picklePath, failedPath)
     height, width = patients['train'][0].ImageTypes[imgType][0].shape
     for setType in patients:
