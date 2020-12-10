@@ -1,8 +1,8 @@
 {
   "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
   "latent_pickle": "Data/latent",
-  "latent_train_file": "la_train_20201207-163905.pickle",
-  "latent_validate_file": "la_validate_20201207-163905.pickle",
+  "latent_train_file": "la_train_20201210-213858.pickle",
+  "latent_validate_file": "la_validate_20201210-213858.pickle",
   "pytorch_model_folder": "Data/pytorch_model",
   "tensoardboardx_folder":  "Data/runs",
   "cuda_seed": -1,

@@ -6,7 +6,7 @@ import os
 import pickle
 import torch
 
-from laconvae import LaConvAE
+from laconvaesmall import LaConvAEsmall as LaConvAE
 
 from utils import get_logger, progress_bar
 from proc_utils import getConfiguration, unSerializePatients

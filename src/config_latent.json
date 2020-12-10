@@ -1,7 +1,7 @@
 {
   "root": "/home/dome/Documents/BME/MSc-EuMernok/Diplomaterv/Software/",
   "pytorch_model_folder": "Data/pytorch_model",
-  "pytorch_model_file": "cae_la_20201207-163905.pt",
+  "pytorch_model_file": "cae_la_20201210-213858.pt",
   "pickle_folder": "TestPatientData",
   "image_type": "la",
   "failed_pickle_folder": "Data/failed",
