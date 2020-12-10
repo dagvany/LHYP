@@ -100,10 +100,19 @@ if __name__ == '__main__':
             if saveImage:
                 img = vutils.make_grid(output.cpu().data, normalize=True)
                 writer.add_image('train', img, epoch)
-                logger.info('epoch [{}/{}], loss: {:.4f}'.format(epoch, config["epoch"], loss.data))
+                logger.info('epoch [{}/{}], loss: {:.4f}'.format(
+                    epoch, config["epoch"], loss.data))
                 saveImage = False
             elif i == 0:
                 tempImage = output.cpu().data
+                
+        original = random.choices(validateSet, k=config["batch_size"])
+        original = original.view(-1, 1, height, width)
+        data = original.to(device)
+        output, latent = model(data)
+        loss = criterion(output, data)
+        writer.add_scalar('Loss/test', loss.data, epoch)
+                
 
     img = vutils.make_grid(tempImage, normalize=True)
     writer.add_image('train', img, epoch)
@@ -112,6 +121,7 @@ if __name__ == '__main__':
         {
             'optim': 'adam',
             'bsize': config['batch_size'],
+            'activation': model.getNameOfActivation(),
             'lr': config['learning_rate'],
             'wd': config['weight_decay'],
             'epoch': epoch
@@ -130,8 +140,8 @@ if __name__ == '__main__':
 
         image = torch.cat([original, output.cpu().data], dim=0)
         img = vutils.make_grid(image, normalize=True)
-        writer.add_image('test', img, loss.data)
-        writer.add_scalar('Loss/test', loss.data, i)
+        writer.add_image('test', img, i)
+        writer.add_scalar('Loss_final/test', loss.data, i)
         logger.info('test [{}/{}], loss:{:.4f}'.format(
             i+1, len(validateSet), loss.data))
 
