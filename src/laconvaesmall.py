@@ -15,7 +15,7 @@ class LaConvAEsmall(nn.Module):
 
         self.encoderConv = nn.Sequential(
             nn.BatchNorm2d(1),
-            nn.Conv2d(1, 16, kernel_size=3, stride=4, padding=1),
+            nn.Conv2d(1, 16, kernel_size=3, stride=3, padding=1),
             self.activation(),
 
             nn.BatchNorm2d(16),
