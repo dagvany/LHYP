@@ -11,7 +11,7 @@ from itertools import chain
 import numpy as np
 from pathlib import Path
 
-from laconvae import LaConvAE
+from laconvaesmall import LaConvAEsmall as LaConvAE
 
 from utils import get_logger, progress_bar
 from proc_utils import getConfiguration, unSerializePatients

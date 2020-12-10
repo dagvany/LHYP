@@ -6,8 +6,8 @@
   "pytorch_model_folder": "Data/pytorch_model",
   "tensoardboardx_folder":  "Data/runs",
   "cuda_seed": -1,
-  "epoch_num": 20,
-  "batch_size":  8,
+  "epoch_num": 30,
+  "batch_size":  6,
   "learning_rate": 1e-3,
   "weight_decay": 1e-5
 }
