@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pickle
 import torch
+from torch import nn
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 
@@ -25,12 +26,15 @@ class Net(torch.nn.Module):
         super(Net, self).__init__()
 
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(961, 300),
-            torch.nn.ReLU(),
-            torch.nn.Linear(300, 100),
-            torch.nn.ReLU(),
-            torch.nn.Linear(100, 2),
+            torch.nn.Linear(961, 50),
+            nn.ReLU(),
+            torch.nn.Linear(50, 2)
         )
+        
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                if m.bias is not None:
+                    nn.init.xavier_uniform(m.weight)
 
     def forward(self, input):
         return self.layers(input)
@@ -142,7 +146,7 @@ if __name__ == '__main__':
                 fn += 1
             else:
                 tp += 1
-       
+
     accuracy = (tp + tn) / (tp + fp + fn + tn)
     f1 = (2*tp) / (2*tp + fp + fn)
     recall = tp / (tp + fn)

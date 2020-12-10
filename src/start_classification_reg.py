@@ -47,7 +47,7 @@ pathValidate = os.path.join(
 pathModel = os.path.join(config["root"], config["pytorch_model_folder"])
 timestr = time.strftime("%Y%m%d-%H%M%S")
 
-# Create a svm Classifier
+# Create Classifier
 LRG = linear_model.LogisticRegression(
     random_state=0, solver='liblinear', multi_class='ovr')
 
@@ -71,6 +71,11 @@ inputsValidateSet, labelsValidateSetValue = getInputAndLabelSets(
     latentValidateData, width, height)
 
 outputs = LRG.predict(inputsValidateSet)
+tn, fp, fn, tp = metrics.confusion_matrix(
+    labelsValidateSetValue, outputs).ravel()
+cmMsg = "TP: {} FP: {} FN: {} TN: {}".format(tp, fp, fn, tn)
+logger.info(cmMsg)
+print(cmMsg)
 accMsg = "Accuracy:", metrics.accuracy_score(labelsValidateSetValue, outputs)
 logger.info(accMsg)
 print(accMsg)

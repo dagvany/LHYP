@@ -78,6 +78,11 @@ print('Root Mean Squared Error:', np.sqrt(
     metrics.mean_squared_error(labelsValidateSetValue, outputs)))
 
 outputs = np.round(outputs)
+tn, fp, fn, tp = metrics.confusion_matrix(
+    labelsValidateSetValue, outputs).ravel()
+cmMsg = "TP: {} FP: {} FN: {} TN: {}".format(tp, fp, fn, tn)
+logger.info(cmMsg)
+print(cmMsg)
 accMsg = "Accuracy:", metrics.accuracy_score(labelsValidateSetValue, outputs)
 logger.info(accMsg)
 print(accMsg)

@@ -2,6 +2,7 @@
 .vscode/
 .idea/
 *.log
+charts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -48,7 +48,7 @@ pathModel = os.path.join(config["root"], config["pytorch_model_folder"])
 timestr = time.strftime("%Y%m%d-%H%M%S")
 
 # Create a svm Classifier
-clf = svm.SVC(kernel='linear')
+clf = svm.SVC(kernel='poly', degree=3)
 
 # TRAIN
 with open(pathTrain, 'rb') as fp:
@@ -70,6 +70,11 @@ inputsValidateSet, labelsValidateSetValue = getInputAndLabelSets(
     latentValidateData, width, height)
 
 outputs = clf.predict(inputsValidateSet)
+tn, fp, fn, tp = metrics.confusion_matrix(
+    labelsValidateSetValue, outputs).ravel()
+cmMsg = "TP: {} FP: {} FN: {} TN: {}".format(tp, fp, fn, tn)
+logger.info(cmMsg)
+print(cmMsg)
 accMsg = "Accuracy:", metrics.accuracy_score(labelsValidateSetValue, outputs)
 logger.info(accMsg)
 print(accMsg)
