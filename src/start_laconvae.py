@@ -108,14 +108,14 @@ if __name__ == '__main__':
                 tempImage = output.cpu().data
                 
         model.eval()
-        original = validateSet
-        original = original.view(-1, 1, height, width)
-        data = original.to(device)
-        output, latent = model(data)
-        loss = criterion(output, data)
-        writer.add_scalar('Loss/test', loss.data, epoch)
+        with torch.no_grad():
+            original = validateSet
+            original = original.view(-1, 1, height, width)
+            data = original.to(device)
+            output, latent = model(data)
+            loss = criterion(output, data)
+            writer.add_scalar('Loss/test', loss.data, epoch)
                 
-
     img = vutils.make_grid(tempImage, normalize=True)
     writer.add_image('train', img, epoch)
 
