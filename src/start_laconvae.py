@@ -11,7 +11,7 @@ from itertools import chain
 import numpy as np
 from pathlib import Path
 
-from laconvaesmall import LaConvAEsmall as LaConvAE
+from laconvae import LaConvAE
 
 from utils import get_logger, progress_bar
 from proc_utils import getConfiguration, unSerializePatients
@@ -81,6 +81,7 @@ if __name__ == '__main__':
         if epoch % 10 == 0:
             saveImage = True
 
+        model.train()
         for i in range(0, len(trainSet), config["batch_size"]):
             original = trainSet[i:i + config["batch_size"]]
             original = original.view(-1, 1, height, width)
@@ -106,6 +107,7 @@ if __name__ == '__main__':
             elif i == 0:
                 tempImage = output.cpu().data
                 
+        model.eval()
         original = validateSet
         original = original.view(-1, 1, height, width)
         data = original.to(device)
