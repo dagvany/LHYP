@@ -107,7 +107,6 @@ if __name__ == '__main__':
                 tempImage = output.cpu().data
                 
         original = random.choice(validateSet)
-        original = torch.tensor(original)
         original = original.view(-1, 1, height, width)
         data = original.to(device)
         output, latent = model(data)
