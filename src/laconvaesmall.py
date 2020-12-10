@@ -11,11 +11,11 @@ class LaConvAEsmall(nn.Module):
     def __init__(self):
         super(LaConvAEsmall, self).__init__()
 
-        self.activation = nn.SELU
+        self.activation = nn.ReLU
 
         self.encoderConv = nn.Sequential(
             nn.BatchNorm2d(1),
-            nn.Conv2d(1, 16, kernel_size=4, stride=2, padding=0),
+            nn.Conv2d(1, 16, kernel_size=3, stride=4, padding=1),
             self.activation(),
 
             nn.BatchNorm2d(16),
@@ -23,7 +23,7 @@ class LaConvAEsmall(nn.Module):
             self.activation(),
 
             nn.BatchNorm2d(32),
-            nn.Conv2d(32, 16, kernel_size=5, stride=3, padding=0),
+            nn.Conv2d(32, 16, kernel_size=2, stride=2, padding=0),
             self.activation(),
 
             # Instead of MaxPool
@@ -36,11 +36,11 @@ class LaConvAEsmall(nn.Module):
             nn.ConvTranspose2d(1, 16, kernel_size=1, stride=1, padding=0),
             self.activation(),
 
-            nn.ConvTranspose2d(16, 32, kernel_size=5, stride=3, padding=0),
+            nn.ConvTranspose2d(16, 32, kernel_size=2, stride=2, padding=0),
             self.activation(),
             nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2, padding=0),
             self.activation(),
-            nn.ConvTranspose2d(16, 1, kernel_size=4, stride=2, padding=0),
+            nn.ConvTranspose2d(16, 1, kernel_size=3, stride=3, padding=1),
             self.activation()
         )
 
