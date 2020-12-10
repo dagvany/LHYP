@@ -5,7 +5,7 @@ from torch import nn
 
 
 class LaConvAE(nn.Module):
-    def getNameOfActivation():
+    def getNameOfActivation(self):
         return self.activation()._get_name()
     
     def __init__(self):
